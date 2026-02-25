@@ -6,6 +6,7 @@ resource "proxmox_vm_qemu" "yggdrassil_master" {
     full_clone = true
     vmid = 100
     memory = 4096
+    onboot = true
 
     scsihw = "virtio-scsi-pci"
     boot = "order=scsi0"
@@ -62,6 +63,7 @@ resource "proxmox_vm_qemu" "yggdrassil_worker" {
     full_clone = true
     vmid = 100
     memory = 4096
+    onboot = true
 
     scsihw = "virtio-scsi-pci"
     boot = "order=scsi0"
