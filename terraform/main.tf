@@ -15,11 +15,22 @@ resource "proxmox_vm_qemu" "yggdrassil_master" {
         sockets = 1
     }
 
-    disk {
-        size = "50G"
-        type = "disk"
-        storage = "local-lvm"
-        slot = "scsi0"
+    disks {
+        scsi{
+            scsi0 {
+              disk {
+                size = "50G"
+                storage = "local-lvm"
+              }
+            }
+        }
+        ide {
+          ide1 {
+            cloudinit {
+              storage = "local-lvm"
+            }
+          }
+        }
     }
     network {
         id = 0
@@ -60,12 +71,24 @@ resource "proxmox_vm_qemu" "yggdrassil_worker" {
         sockets = 1
     }
 
-    disk {
-        size = "50G"
-        type = "disk"
-        storage = "local-lvm"
-        slot = "scsi0"
+    disks {
+        scsi{
+            scsi0 {
+              disk {
+                size = "50G"
+                storage = "local-lvm"
+              }
+            }
+        }
+        ide {
+          ide1 {
+            cloudinit {
+              storage = "local-lvm"
+            }
+          }
+        }
     }
+    
     network {
         id = 0
         model = "virtio"
