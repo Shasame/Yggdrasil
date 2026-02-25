@@ -1,0 +1,22 @@
+---
+- name: Install K3s Master
+  shell: |
+    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable=traefik --disable=servicelb" sh -
+  args:
+    creates: /var/lib/rancher/k3s/server/node-token
+
+- name: Wait fro K3s to be up
+  wait_for:
+    port: 6443
+    delay: 10
+    timeout: 300
+  
+- name: Get K3s node token
+  slurp:
+    src: /var/lib/rancher/k3s/server/node-token
+  register: k3s_token_b64
+
+- name: Decode K3s Token
+  set_fact:
+    k3s_token: "{{ k3s_token_b64['content'] | b64decode | trim }}"
+    

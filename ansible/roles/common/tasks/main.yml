@@ -1,0 +1,25 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Upgrade all packages
+  apt:
+    upgrade: dist
+    state: latest
+  
+- name: Install dependencies for Longhorn and K3s
+  apt:
+    name:
+      - curl
+      - open-iscsi
+      - nfs-common
+      - cryptsetup
+    state: present
+
+- name: Enable and start iscsid service
+  service:
+    name: iscsid
+    state: started
+    enabled: yes
