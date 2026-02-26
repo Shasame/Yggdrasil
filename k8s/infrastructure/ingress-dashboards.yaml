@@ -1,0 +1,31 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: argocd-server
+  namespace: argocd
+spec:
+  entryPoints:
+    - websecure # Port 443
+  routes:
+    - match: Host(`argocd.yggdrasil.local`)
+      kind: Rule
+      services:
+        - name: argocd-server
+          port: 80 # ArgoCD redirects 80->443 internally usually, or use 443 with insecureSkipVerify
+  tls:
+    certResolver: default
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: longhorn-frontend
+  namespace: longhorn-system
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`longhorn.yggdrasil.local`)
+      kind: Rule
+      services:
+        - name: longhorn-frontend
+          port: 80
