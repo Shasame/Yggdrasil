@@ -1,4 +1,12 @@
 apiVersion: traefik.io/v1alpha1
+kind: ServersTransport
+metadata:
+  name: skip-tls-verify
+  namespace: argocd
+spec:
+  insecureSkipVerify: true
+---
+apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
   name: argocd-server
@@ -11,7 +19,8 @@ spec:
       kind: Rule
       services:
         - name: argocd-server
-          port: 80 # ArgoCD redirects 80->443 internally usually, or use 443 with insecureSkipVerify
+          port: 443
+          serversTransport: skip-tls-verify
   tls:
     certResolver: default
 ---
