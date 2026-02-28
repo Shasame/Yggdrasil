@@ -31,7 +31,7 @@ kind: ClusterIssuer
 metadata:
   name: yggdrasil-issuer
   annotations:
-    argocd.argoproj.io/sync-wave: "6"
+    argocd.argoproj.io/sync-wave: "5"
 spec:
   ca:
     secretName: yggdrasil-ca-secret
