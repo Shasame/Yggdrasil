@@ -2,6 +2,8 @@ apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
   name: selfsigned-issuer
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
 spec:
   selfSigned: {}
 ---
@@ -10,6 +12,8 @@ kind: Certificate
 metadata:
   name: yggdrasil-ca
   namespace: cert-manager
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
 spec:
   isCA: true
   commonName: yggdrasil-ca
@@ -26,6 +30,8 @@ apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
   name: yggdrasil-issuer
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
 spec:
   ca:
     secretName: yggdrasil-ca-secret
