@@ -28,8 +28,6 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /etc/dex
-            - name: tls
-              mountPath: /etc/dex/tls
       volumes:
         - name: config
           configMap:
