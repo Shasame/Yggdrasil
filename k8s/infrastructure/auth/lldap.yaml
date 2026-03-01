@@ -1,0 +1,97 @@
+# 1. Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: auth
+---
+# 2. Storage (Longhorn)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: lldap-data
+  namespace: auth
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 1Gi
+---
+# 3. The Application
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lldap
+  namespace: auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lldap
+  template:
+    metadata:
+      labels:
+        app: lldap
+    spec:
+      containers:
+        - name: lldap
+          image: lldap/lldap:stable
+          ports:
+            - containerPort: 17170 # Web UI
+            - containerPort: 3890  # LDAP Port
+          env:
+            - name: LLDAP_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: lldap-credentials  
+                  key: jwt-secret
+            - name: LLDAP_LDAP_USER_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: lldap-credentials
+                  key: admin-password
+            - name: LLDAP_LDAP_BASE_DN
+              value: "dc=yggdrasil,dc=local"
+          volumeMounts:
+            - mountPath: "/data"
+              name: data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: lldap-data
+---
+# 4. The Internal Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: lldap
+  namespace: auth
+spec:
+  ports:
+    - name: http
+      port: 17170
+      targetPort: 17170
+    - name: ldap
+      port: 3890
+      targetPort: 3890
+  selector:
+    app: lldap
+---
+# 5. The External Route (Traefik)
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: lldap-web
+  namespace: auth
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`lldap.yggdrasil.local`)
+      kind: Rule
+      services:
+        - name: lldap
+          port: 17170
+  tls:
+    certResolver: default
