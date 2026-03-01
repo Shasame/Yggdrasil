@@ -1,3 +1,205 @@
+# --- 1. CRDs (The Data Structure) ---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: authcodes.dex.coreos.com
+spec:
+  group: dex.coreos.com
+  names:
+    kind: AuthCode
+    listKind: AuthCodeList
+    plural: authcodes
+    singular: authcode
+  scope: Namespaced
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: authrequests.dex.coreos.com
+spec:
+  group: dex.coreos.com
+  names:
+    kind: AuthRequest
+    listKind: AuthRequestList
+    plural: authrequests
+    singular: authrequest
+  scope: Namespaced
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: connectors.dex.coreos.com
+spec:
+  group: dex.coreos.com
+  names:
+    kind: Connector
+    listKind: ConnectorList
+    plural: connectors
+    singular: connector
+  scope: Namespaced
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: oauth2clients.dex.coreos.com
+spec:
+  group: dex.coreos.com
+  names:
+    kind: OAuth2Client
+    listKind: OAuth2ClientList
+    plural: oauth2clients
+    singular: oauth2client
+  scope: Namespaced
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: offlinesessions.dex.coreos.com
+spec:
+  group: dex.coreos.com
+  names:
+    kind: OfflineSession
+    listKind: OfflineSessionList
+    plural: offlinesessions
+    singular: offlinesession
+  scope: Namespaced
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: passwords.dex.coreos.com
+spec:
+  group: dex.coreos.com
+  names:
+    kind: Password
+    listKind: PasswordList
+    plural: passwords
+    singular: password
+  scope: Namespaced
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: refreshtokens.dex.coreos.com
+spec:
+  group: dex.coreos.com
+  names:
+    kind: RefreshToken
+    listKind: RefreshTokenList
+    plural: refreshtokens
+    singular: refreshtoken
+  scope: Namespaced
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: signingkeys.dex.coreos.com
+spec:
+  group: dex.coreos.com
+  names:
+    kind: SigningKey
+    listKind: SigningKeyList
+    plural: signingkeys
+    singular: signingkey
+  scope: Namespaced
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
+---
+# --- 2. RBAC (The Permissions) ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dex
+  namespace: auth
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dex
+rules:
+- apiGroups: ["dex.coreos.com"]
+  resources: ["*"]
+  verbs: ["*"]
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["create"] # To manage its own CRDs
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dex
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dex
+subjects:
+- kind: ServiceAccount
+  name: dex
+  namespace: auth
+---
+# --- 3. The Deployment (Updated) ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -13,6 +215,7 @@ spec:
       labels:
         app: dex
     spec:
+      serviceAccountName: dex  # <--- CRITICAL: Bind to the new ServiceAccount
       containers:
         - name: dex
           image: ghcr.io/dexidp/dex:v2.37.0
@@ -33,6 +236,7 @@ spec:
           configMap:
             name: dex-config
 ---
+# --- 4. Service & Ingress (Unchanged) ---
 apiVersion: v1
 kind: Service
 metadata:
@@ -62,6 +266,7 @@ spec:
   tls:
     certResolver: default
 ---
+# --- 5. ConfigMap (Unchanged) ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -84,9 +289,8 @@ data:
       config:
         host: lldap:3890
         insecureNoSSL: true
-        bindDN: uid=admin,ou=people,dc=yggdrasil,dc=local        
+        bindDN: uid=admin,ou=people,dc=yggdrasil,dc=local
         bindPW: $LLDAP_BIND_PW
-        
         usernamePrompt: Username
         userSearch:
           baseDN: ou=people,dc=yggdrasil,dc=local
@@ -103,7 +307,6 @@ data:
             groupAttr: member
           nameAttr: cn
 
-    # We will configure the OAuth2-Proxy client in the next step
     staticClients:
     - id: oauth2-proxy
       redirectURIs:
