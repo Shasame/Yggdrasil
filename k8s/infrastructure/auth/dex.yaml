@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dex
+  namespace: auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dex
+  template:
+    metadata:
+      labels:
+        app: dex
+    spec:
+      containers:
+        - name: dex
+          image: ghcr.io/dexidp/dex:v2.37.0
+          args: ["dex", "serve", "/etc/dex/config.yaml"]
+          ports:
+            - containerPort: 5556
+          env:
+            - name: LLDAP_BIND_PW
+              valueFrom:
+                secretKeyRef:
+                  name: lldap-credentials
+                  key: admin-password
+          volumeMounts:
+            - name: config
+              mountPath: /etc/dex
+            - name: tls
+              mountPath: /etc/dex/tls
+      volumes:
+        - name: config
+          configMap:
+            name: dex-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dex
+  namespace: auth
+spec:
+  ports:
+    - name: http
+      port: 5556
+  selector:
+    app: dex
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: dex
+  namespace: auth
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`auth.yggdrasil.local`)
+      kind: Rule
+      services:
+        - name: dex
+          port: 5556
+  tls:
+    certResolver: default
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dex-config
+  namespace: auth
+data:
+  config.yaml: |
+    issuer: https://auth.yggdrasil.local
+    storage:
+      type: kubernetes
+      config:
+        inCluster: true
+    web:
+      http: 0.0.0.0:5556
+    
+    connectors:
+    - type: ldap
+      name: LLDAP
+      id: lldap
+      config:
+        host: lldap:3890
+        insecureNoSSL: true
+        bindDN: uid=admin,ou=people,dc=yggdrasil,dc=local        
+        bindPW: $LLDAP_BIND_PW
+        
+        usernamePrompt: Username
+        userSearch:
+          baseDN: ou=people,dc=yggdrasil,dc=local
+          filter: "(objectClass=person)"
+          username: uid
+          idAttr: uid
+          emailAttr: mail
+          nameAttr: cn
+        groupSearch:
+          baseDN: ou=groups,dc=yggdrasil,dc=local
+          filter: "(objectClass=groupOfUniqueNames)"
+          userMatchers:
+          - userAttr: uid
+            groupAttr: member
+          nameAttr: cn
+
+    # We will configure the OAuth2-Proxy client in the next step
+    staticClients:
+    - id: oauth2-proxy
+      redirectURIs:
+      - 'https://auth.yggdrasil.local/oauth2/callback'
+      name: 'OAuth2 Proxy'
+      secret: proxy-secret-123456
