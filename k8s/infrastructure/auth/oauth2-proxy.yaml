@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oauth2-proxy
+  namespace: auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oauth2-proxy
+  template:
+    metadata:
+      labels:
+        app: oauth2-proxy
+    spec:
+      containers:
+        - name: oauth2-proxy
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+          args:
+            - --provider=oidc
+            - --email-domain=*
+            - --upstream=file:///dev/null
+            - --http-address=0.0.0.0:4180
+            # 1. Connect to Dex
+            - --oidc-issuer-url=https://auth.yggdrasil.local
+            # 2. Configure the Login Domain
+            - --redirect-url=https://login.yggdrasil.local/oauth2/callback
+            - --cookie-domain=.yggdrasil.local
+            - --whitelist-domain=.yggdrasil.local
+            # 3. Security Settings
+            - --cookie-secure=true
+            - --cookie-samesite=lax
+            - --cookie-refresh=1h
+            - --skip-provider-button=true # Auto-redirect to Dex
+          env:
+            - name: OAUTH2_PROXY_CLIENT_ID
+              value: "oauth2-proxy"
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy-creds
+                  key: client-secret
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy-creds
+                  key: cookie-secret
+          ports:
+            - containerPort: 4180
+              name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oauth2-proxy
+  namespace: auth
+spec:
+  ports:
+    - name: http
+      port: 4180
+      targetPort: 4180
+  selector:
+    app: oauth2-proxy
+---
+# Expose the "Login" domain so Traefik can route callbacks here
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: oauth2-proxy-login
+  namespace: auth
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`login.yggdrasil.local`)
+      kind: Rule
+      services:
+        - name: oauth2-proxy
+          port: 4180
+  tls:
+    certResolver: default
