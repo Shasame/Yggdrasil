@@ -215,7 +215,7 @@ spec:
       labels:
         app: dex
     spec:
-      serviceAccountName: dex  # <--- CRITICAL: Bind to the new ServiceAccount
+      serviceAccountName: dex
       containers:
         - name: dex
           image: ghcr.io/dexidp/dex:v2.37.0
@@ -228,6 +228,11 @@ spec:
                 secretKeyRef:
                   name: lldap-credentials
                   key: admin-password
+            - name: OAUTH2_PROXY_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy-creds
+                  key: client-secret
           volumeMounts:
             - name: config
               mountPath: /etc/dex
@@ -310,6 +315,6 @@ data:
     staticClients:
     - id: oauth2-proxy
       redirectURIs:
-      - 'https://auth.yggdrasil.local/oauth2/callback'
+      - 'https://login.yggdrasil.local/oauth2/callback'
       name: 'OAuth2 Proxy'
-      secret: proxy-secret-123456
+      secret: $OAUTH2_PROXY_SECRET
