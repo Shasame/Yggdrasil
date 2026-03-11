@@ -36,6 +36,7 @@ spec:
             - --cookie-samesite=lax
             - --cookie-refresh=1h
             - --skip-provider-button=true # Auto-redirect to Dex
+            - --reverse-proxy=true # Enable reverse proxy support for correct redirects
             - --ssl-insecure-skip-verify=true # Skip TLS verification for Dex for now
           env:
             - name: OAUTH2_PROXY_CLIENT_ID
