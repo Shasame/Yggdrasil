@@ -23,7 +23,7 @@ spec:
           args:
             - --provider=oidc
             - --email-domain=*
-            - --upstream=file:///dev/null
+            - --upstream=static://200
             - --http-address=0.0.0.0:4180
             # 1. Connect to Dex
             - --oidc-issuer-url=https://auth.yggdrasil.local
@@ -93,7 +93,7 @@ metadata:
   namespace: auth
 spec:
   forwardAuth:
-    address: http://oauth2-proxy.auth.svc.cluster.local:4180/oauth2/auth
+    address: http://oauth2-proxy.auth.svc.cluster.local:4180/
     trustForwardHeader: true
     authResponseHeaders:
       - X-Auth-Request-User
