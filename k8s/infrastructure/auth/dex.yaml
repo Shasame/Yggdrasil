@@ -315,4 +315,4 @@ data:
       redirectURIs:
       - 'https://login.yggdrasil.local/oauth2/callback'
       name: 'OAuth2 Proxy'
-      secret: $OAUTH2_PROXY_SECRET
+      secretEnv: OAUTH2_PROXY_SECRET
