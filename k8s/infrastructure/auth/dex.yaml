@@ -281,9 +281,7 @@ data:
   config.yaml: |
     issuer: https://auth.yggdrasil.local
     storage:
-      type: kubernetes
-      config:
-        inCluster: true
+      type: memory
     web:
       http: 0.0.0.0:5556
     
