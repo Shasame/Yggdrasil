@@ -233,6 +233,11 @@ spec:
                 secretKeyRef:
                   name: oauth2-proxy-creds
                   key: client-secret
+            - name: ARGOCD_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: argocd-client-creds
+                  key: client-secret
           volumeMounts:
             - name: config
               mountPath: /etc/dex
@@ -318,3 +323,8 @@ data:
       - 'https://login.shasame.fr/oauth2/callback'
       name: 'OAuth2 Proxy'
       secretEnv: OAUTH2_PROXY_SECRET
+    - id: argocd
+      name: 'Argo CD'
+      redirectURIs:
+      - 'https://argocd.shasame.fr/auth/callback'
+      secretEnv: ARGOCD_CLIENT_SECRET
