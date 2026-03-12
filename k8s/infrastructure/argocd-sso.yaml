@@ -3,12 +3,14 @@ kind: ConfigMap
 metadata:
   name: argocd-cm
   namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cm
+    app.kubernetes.io/part-of: argocd
 data:
   url: https://argocd.shasame.fr
   oidc.config: |
     name: Yggdrasil SSO
     issuer: https://auth.shasame.fr
     clientID: argocd
-    # ArgoCD will look for a key named 'oidc.dex.clientSecret' inside the 'argocd-secret' Kubernetes Secret
     clientSecret: $oidc.dex.clientSecret 
     requestedScopes: ["openid", "profile", "email", "groups"]
