@@ -15,7 +15,7 @@ spec:
   entryPoints:
     - websecure # Port 443
   routes:
-    - match: Host(`argocd.yggdrasil.local`)
+    - match: Host(`argocd.shasame.fr`)
       kind: Rule
       services:
         - name: argocd-server
@@ -33,7 +33,7 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`longhorn.yggdrasil.local`)
+    - match: Host(`longhorn.shasame.fr`)
       kind: Rule
       services:
         - name: longhorn-frontend

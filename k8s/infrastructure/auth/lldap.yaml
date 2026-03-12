@@ -88,7 +88,7 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`lldap.yggdrasil.local`)
+    - match: Host(`lldap.shasame.fr`)
       kind: Rule
       services:
         - name: lldap

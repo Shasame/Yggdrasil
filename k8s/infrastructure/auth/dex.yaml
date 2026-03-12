@@ -263,7 +263,7 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`auth.yggdrasil.local`)
+    - match: Host(`auth.shasame.fr`)
       kind: Rule
       services:
         - name: dex
@@ -279,7 +279,7 @@ metadata:
   namespace: auth
 data:
   config.yaml: |
-    issuer: https://auth.yggdrasil.local
+    issuer: https://auth.shasame.fr
     storage:
       type: kubernetes
       config:
@@ -315,6 +315,6 @@ data:
     staticClients:
     - id: oauth2-proxy
       redirectURIs:
-      - 'https://login.yggdrasil.local/oauth2/callback'
+      - 'https://login.shasame.fr/oauth2/callback'
       name: 'OAuth2 Proxy'
       secretEnv: OAUTH2_PROXY_SECRET

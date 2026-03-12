@@ -16,7 +16,7 @@ spec:
       hostAliases:
         - ip: "192.168.1.220"
           hostnames:
-          - "auth.yggdrasil.local"
+          - "auth.shasame.fr"
       containers:
         - name: oauth2-proxy
           image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
@@ -26,11 +26,11 @@ spec:
             - --upstream=static://200
             - --http-address=0.0.0.0:4180
             # 1. Connect to Dex
-            - --oidc-issuer-url=https://auth.yggdrasil.local
+            - --oidc-issuer-url=https://auth.shasame.fr
             # 2. Configure the Login Domain
-            - --redirect-url=https://login.yggdrasil.local/oauth2/callback
-            - --cookie-domain=.yggdrasil.local
-            - --whitelist-domain=.yggdrasil.local
+            - --redirect-url=https://login.shasame.fr/oauth2/callback
+            - --cookie-domain=.shasame.fr
+            - --whitelist-domain=.shasame.fr
             # 3. Security Settings
             - --cookie-secure=true
             - --cookie-samesite=lax
@@ -78,7 +78,7 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`login.yggdrasil.local`)
+    - match: Host(`login.shasame.fr`)
       kind: Rule
       services:
         - name: oauth2-proxy
