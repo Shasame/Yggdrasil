@@ -1,46 +1,96 @@
-apiVersion: argoproj.io/v1alpha1
-kind: Application
+# 1. Namespace
+apiVersion: v1
+kind: Namespace
 metadata:
-  name: adguard-home
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
+  name: network
+---
+# 2. Storage for Config and Query Logs
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: adguard-data
+  namespace: network
 spec:
-  project: default
-  source:
-    repoURL: 'https://adguardteam.github.io/adguard-home-helm-chart'
-    chart: adguard-home
-    targetRevision: '2.4.2' # Stable chart version
-    helm:
-      values: |
-        service:
-          type: LoadBalancer
-          loadBalancerIP: 192.168.1.240
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 5Gi
+---
+# 3. The Application
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adguard
+  namespace: network
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: adguard
+  template:
+    metadata:
+      labels:
+        app: adguard
+    spec:
+      containers:
+        - name: adguard
+          image: adguard/adguardhome:v0.107.44
           ports:
-            dns-udp:
-              port: 53
-              targetPort: 53
-              protocol: UDP
-            dns-tcp:
-              port: 53
-              targetPort: 53
+            - containerPort: 53
+              name: dns-tcp
               protocol: TCP
-            http:
-              port: 80
-              targetPort: 3000
-        persistence:
-          enabled: true
-          storageClass: "longhorn"
-          size: 2Gi
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: network
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
+            - containerPort: 53
+              name: dns-udp
+              protocol: UDP
+            - containerPort: 80
+              name: web
+            - containerPort: 3000
+              name: setup
+          volumeMounts:
+            - mountPath: /opt/adguardhome/work
+              name: data
+              subPath: work
+            - mountPath: /opt/adguardhome/conf
+              name: data
+              subPath: conf
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: adguard-data
+---
+# 4. The MetalLB Static IP Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: adguard
+  namespace: network
+  annotations:
+    metallb.universe.tf/allow-shared-ip: "adguard"
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 192.168.1.240 
+  externalTrafficPolicy: Local   # Preserves the real IP of devices in the logs
+  ports:
+    - name: dns-tcp
+      port: 53
+      targetPort: 53
+      protocol: TCP
+    - name: dns-udp
+      port: 53
+      targetPort: 53
+      protocol: UDP
+    - name: web
+      port: 80
+      targetPort: 80
+      protocol: TCP
+    - name: setup
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+  selector:
+    app: adguard
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
