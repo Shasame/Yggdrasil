@@ -115,7 +115,7 @@ spec:
     - match: Host(`adguard.shasame.fr`)
       kind: Rule
       services:
-        - name: adguard-home
+        - name: adguard
           port: 80
       middlewares:
         - name: auth-forward
