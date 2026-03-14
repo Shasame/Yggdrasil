@@ -23,3 +23,9 @@
     name: iscsid
     state: started
     enabled: yes
+- name: Disable and stop multipathd service
+  systemd:
+    name: multipathd
+    state: stopped
+    enabled: no
+  ignore_errors: true
