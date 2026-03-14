@@ -40,10 +40,10 @@ spec:
         - name: adguard
           image: adguard/adguardhome:v0.107.44
           resources:
-            limits:
+            requests:
               memory: "50Mi"
               cpu: "50m"
-            requests:
+            limits:
               memory: "150Mi"
               cpu: "200m"
           ports:
