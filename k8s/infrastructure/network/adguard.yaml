@@ -92,11 +92,11 @@ spec:
       protocol: UDP
     - name: web
       port: 80
-      targetPort: 3000
+      targetPort: 80
       protocol: TCP
     - name: setup
       port: 3000
-      targetPort: 80
+      targetPort: 3000
       protocol: TCP
   selector:
     app: adguard
