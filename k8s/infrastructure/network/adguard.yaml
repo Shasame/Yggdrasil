@@ -34,9 +34,18 @@ spec:
       labels:
         app: adguard
     spec:
+      nodeSelector:
+        node-role.kubernetes.io/worker: "worker"
       containers:
         - name: adguard
           image: adguard/adguardhome:v0.107.44
+          resources:
+            limits:
+              memory: "50Mi"
+              cpu: "50m"
+            requests:
+              memory: "150Mi"
+              cpu: "200m"
           ports:
             - containerPort: 53
               name: dns-tcp
