@@ -104,6 +104,9 @@ spec:
           image: ghcr.io/gethomepage/homepage:latest
           ports:
             - containerPort: 3000
+          env:
+            - name: HOMEPAGE_ALLOWED_HOSTS
+              value: "home.shasame.fr"
           resources:
             requests:
               memory: "50Mi"
@@ -150,4 +153,4 @@ spec:
         - name: auth-forward
           namespace: auth
   tls:
-    secretName: yggdrasil-wildcard-tls
+    certResolver: default
