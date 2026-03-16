@@ -18,6 +18,9 @@ rules:
   - apiGroups: [""]
     resources: ["nodes", "pods", "namespaces"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["nodes", "pods"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -50,6 +53,7 @@ data:
   
   widgets.yaml: |
     - kubernetes:
+        mode: cluster
         cluster:
           show: true
           cpu: true
