@@ -1,0 +1,153 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apps
+---
+# 1. RBAC (So Homepage can read Node RAM/CPU)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: homepage
+  namespace: apps
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: homepage-role
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "pods", "namespaces"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: homepage-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: homepage-role
+subjects:
+  - kind: ServiceAccount
+    name: homepage
+    namespace: apps
+---
+# 2. The Configuration (Your Dashboard Layout)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homepage-config
+  namespace: apps
+data:
+  settings.yaml: |
+    title: "Yggdrasil Command Center"
+    background: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop"
+    theme: dark
+    layout:
+      Infrastructure:
+        style: row
+        columns: 4
+  
+  widgets.yaml: |
+    - kubernetes:
+        cluster:
+          show: true
+          cpu: true
+          memory: true
+          showLabel: true
+          label: "Yggdrasil Cluster"
+        nodes:
+          show: true
+          cpu: true
+          memory: true
+          showLabel: true
+  
+  services.yaml: |
+    - Infrastructure:
+        - ArgoCD:
+            href: "https://argocd.shasame.fr"
+            description: "GitOps Engine"
+            icon: "argocd.png"
+        - Longhorn:
+            href: "https://longhorn.shasame.fr"
+            description: "Distributed Storage"
+            icon: "longhorn.png"
+        - AdGuard Home:
+            href: "https://adguard.shasame.fr"
+            description: "Network AdBlocker"
+            icon: "adguard-home.png"
+        - LLDAP:
+            href: "https://lldap.shasame.fr"
+            description: "User Directory"
+            icon: "ldap.png"
+
+---
+# 3. The Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homepage
+  namespace: apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: homepage
+  template:
+    metadata:
+      labels:
+        app: homepage
+    spec:
+      serviceAccountName: homepage
+      containers:
+        - name: homepage
+          image: ghcr.io/gethomepage/homepage:latest
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              memory: "50Mi"
+              cpu: "50m"
+            limits:
+              memory: "150Mi"
+              cpu: "200m"
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+      volumes:
+        - name: config
+          configMap:
+            name: homepage-config
+---
+# 4. The Service & Ingress
+apiVersion: v1
+kind: Service
+metadata:
+  name: homepage
+  namespace: apps
+spec:
+  ports:
+    - port: 3000
+      targetPort: 3000
+  selector:
+    app: homepage
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: homepage
+  namespace: apps
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`home.shasame.fr`)
+      kind: Rule
+      services:
+        - name: homepage
+          port: 3000
+      middlewares:
+        - name: auth-forward
+          namespace: auth
+  tls:
+    secretName: yggdrasil-wildcard-tls
