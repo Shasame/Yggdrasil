@@ -326,5 +326,5 @@ data:
     - id: argocd
       name: 'Argo CD'
       redirectURIs:
-      - 'https://argocd.shasame.fr/api/dex/callback'
+      - 'https://argocd.shasame.fr/auth/callback'
       secretEnv: ARGOCD_CLIENT_SECRET
