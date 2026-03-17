@@ -1,15 +1,15 @@
+# 1. Namespace
 apiVersion: v1
 kind: Namespace
 metadata:
   name: apps
-
 ---
+# 2. RBAC (Permissions for Homepage to read RAM/CPU)
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: homepage
   namespace: apps
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -17,19 +17,11 @@ metadata:
   name: homepage-role
 rules:
   - apiGroups: [""]
-    resources:
-      - nodes
-      - pods
-      - namespaces
-      - services
-    verbs: ["get","list","watch"]
-
+    resources: ["nodes", "pods", "namespaces"]
+    verbs: ["get", "list", "watch"]
   - apiGroups: ["metrics.k8s.io"]
-    resources:
-      - nodes
-      - pods
-    verbs: ["get","list","watch"]
-
+    resources: ["nodes", "pods"]
+    verbs: ["get", "list"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -43,47 +35,27 @@ subjects:
   - kind: ServiceAccount
     name: homepage
     namespace: apps
-
 ---
+# 3. The Configuration Files
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: homepage-settings
+  name: homepage-config
   namespace: apps
 data:
-  settings.yaml: |
-    title: Yggdrasil Command Center
-    theme: dark
-    headerStyle: boxed
+  kubernetes.yaml: |
+    yggdrasil:
+      mode: cluster
 
+  settings.yaml: |
+    title: "Yggdrasil Command Center"
+    background: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop"
+    theme: dark
     layout:
       Infrastructure:
         style: row
         columns: 4
-
-      Observability:
-        style: row
-        columns: 4
-
-      Media:
-        style: row
-        columns: 5
-
-      Internet:
-        style: row
-        columns: 5
-
-      Utilities:
-        style: row
-        columns: 3
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: homepage-widgets
-  namespace: apps
-data:
+  
   widgets.yaml: |
     - kubernetes:
         cluster:
@@ -91,84 +63,33 @@ data:
           cpu: true
           memory: true
           showLabel: true
-          label: Yggdrasil Cluster
-
+          label: "Yggdrasil"
         nodes:
           show: true
           cpu: true
           memory: true
-
-        pods:
-          show: true
-
-    - datetime:
-        text_size: xl
-        format:
-          dateStyle: full
-          timeStyle: long
-
-    - search:
-        provider: duckduckgo
-        target: _blank
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: homepage-services
-  namespace: apps
-data:
+          showLabel: true
+  
   services.yaml: |
     - Infrastructure:
         - ArgoCD:
-            href: https://argocd.shasame.fr
-            description: GitOps Engine
-            icon: argocd.png
-            ping: https://argocd.shasame.fr
-
+            href: "https://argocd.shasame.fr"
+            description: "GitOps Engine"
+            icon: "argocd.png"
         - Longhorn:
-            href: https://longhorn.shasame.fr
-            description: Distributed Storage
-            icon: longhorn.png
-
+            href: "https://longhorn.shasame.fr"
+            description: "Distributed Storage"
+            icon: "longhorn.png"
         - AdGuard:
-            href: https://adguard.shasame.fr
-            description: Network Ad Blocking
-            icon: adguard-home.png
-
+            href: "https://adguard.shasame.fr"
+            description: "Network AdBlocker"
+            icon: "adguard-home.png"
         - LLDAP:
-            href: https://lldap.shasame.fr
-            description: Directory Service
-            icon: ldap.png
-
-    - Observability:
-        - Grafana:
-            href: https://grafana.shasame.fr
-            icon: grafana.png
-
-        - Prometheus:
-            href: https://prometheus.shasame.fr
-            icon: prometheus.png
-
-    - Media:
-        - Twitch:
-            href: https://twitch.tv
-            icon: twitch.png
-
-        - YouTube:
-            href: https://youtube.com
-            icon: youtube.png
-
-    - Internet:
-        - GitHub:
-            href: https://github.com
-            icon: github.png
-
-        - Reddit:
-            href: https://reddit.com
-            icon: reddit.png
-
+            href: "https://lldap.shasame.fr"
+            description: "User Directory"
+            icon: "ldap.png"
 ---
+# 4. The Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -184,82 +105,60 @@ spec:
       labels:
         app: homepage
     spec:
-      serviceAccountName: homepage
-
+      serviceAccountName: homepage  # Attaches the RBAC permissions
       containers:
         - name: homepage
           image: ghcr.io/gethomepage/homepage:latest
-
           ports:
             - containerPort: 3000
-
+          
+          # Security & Connectivity Fixes
           env:
             - name: HOMEPAGE_ALLOWED_HOSTS
-              value: home.shasame.fr
+              value: "home.shasame.fr"
             - name: NODE_TLS_REJECT_UNAUTHORIZED
-              value: "0"
-
+              value: "0"  # Ignores internal K3s self-signed certs
+          
+          # Keeps Homepage from eating the worker node's RAM
           resources:
             requests:
-              cpu: 20m
-              memory: 32Mi
+              memory: "50Mi"
+              cpu: "50m"
             limits:
-              cpu: 200m
-              memory: 256Mi
-
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 3000
-            initialDelaySeconds: 20
-            periodSeconds: 10
-
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 3000
-            initialDelaySeconds: 5
-            periodSeconds: 10
-
+              memory: "150Mi"
+              cpu: "200m"
+          
+          # Injecting files individually so the folder remains writable for logs
           volumeMounts:
-            - name: settings
+            - name: config
               mountPath: /app/config/settings.yaml
               subPath: settings.yaml
-
-            - name: widgets
+            - name: config
               mountPath: /app/config/widgets.yaml
               subPath: widgets.yaml
-
-            - name: services
+            - name: config
               mountPath: /app/config/services.yaml
               subPath: services.yaml
-
+            - name: config
+              mountPath: /app/config/kubernetes.yaml
+              subPath: kubernetes.yaml
       volumes:
-        - name: settings
+        - name: config
           configMap:
-            name: homepage-settings
-
-        - name: widgets
-          configMap:
-            name: homepage-widgets
-
-        - name: services
-          configMap:
-            name: homepage-services
-
+            name: homepage-config
 ---
+# 5. Service & Traefik Ingress
 apiVersion: v1
 kind: Service
 metadata:
   name: homepage
   namespace: apps
 spec:
-  selector:
-    app: homepage
   ports:
     - port: 3000
       targetPort: 3000
-
+  selector:
+    app: homepage
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -269,7 +168,6 @@ metadata:
 spec:
   entryPoints:
     - websecure
-
   routes:
     - match: Host(`home.shasame.fr`)
       kind: Rule
@@ -279,6 +177,5 @@ spec:
       middlewares:
         - name: auth-forward
           namespace: auth
-
   tls:
     certResolver: default
