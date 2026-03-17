@@ -40,7 +40,6 @@ data:
               - type: iframe
                 title: Lofi Radio
                 url: https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1&mute=1
-                height: 315px
 
 ---
 # 2. The Deployment
