@@ -7,8 +7,8 @@ metadata:
 data:
   glance.yml: |
     theme:
-      background-color: "#0f172a"
-      primary-color: "#3b82f6"
+      background-color: 222 47% 11%
+      primary-color: 217 91% 60%
 
     pages:
       - name: Home
