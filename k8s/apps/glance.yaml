@@ -35,10 +35,6 @@ data:
             widgets:
               - type: weather
                 location: Paris, France # Change to your city!
-              - type: twitch
-                channels:
-                  - alderite
-                  - trayton
           - size: full
             widgets:
               - type: iframe
