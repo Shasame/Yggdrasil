@@ -35,11 +35,6 @@ data:
             widgets:
               - type: weather
                 location: Paris, France # Change to your city!
-          - size: full
-            widgets:
-              - type: iframe
-                title: Lofi Radio
-                url: https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1&mute=1
 
 ---
 # 2. The Deployment
