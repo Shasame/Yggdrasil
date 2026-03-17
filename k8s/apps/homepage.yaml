@@ -196,6 +196,8 @@ spec:
           env:
             - name: HOMEPAGE_ALLOWED_HOSTS
               value: home.shasame.fr
+            - name: NODE_TLS_REJECT_UNAUTHORIZED
+              value: "0"
 
           resources:
             requests:
