@@ -1,0 +1,121 @@
+# 1. The Configuration (Your Feeds and Links)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: glance-config
+  namespace: apps
+data:
+  glance.yml: |
+    theme:
+      background-color: "#0f172a"
+      primary-color: "#3b82f6"
+
+    pages:
+      - name: Home
+        columns:
+          - size: small
+            widgets:
+              - type: bookmarks
+                groups:
+                  - title: Homelab
+                    links:
+                      - title: Infra Dashboard
+                        url: https://home.shasame.fr
+                        icon: server
+                  - title: Daily
+                    links:
+                      - title: GitHub
+                        url: https://github.com
+                        icon: github
+                      - title: YouTube
+                        url: https://youtube.com
+                        icon: youtube
+
+          - size: full
+            widgets:
+              - type: weather
+                location: Paris, France # Change to your city!
+              - type: twitch
+                channels:
+                  - alderite
+                  - trayton
+          - size: full
+            widgets:
+              - type: iframe
+                title: Lofi Radio
+                url: https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1&mute=1
+                height: 315px
+
+---
+# 2. The Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: glance
+  namespace: apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: glance
+  template:
+    metadata:
+      labels:
+        app: glance
+    spec:
+      containers:
+        - name: glance
+          image: glanceapp/glance:latest
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: config
+              mountPath: /app/glance.yml
+              subPath: glance.yml
+          resources:
+            requests:
+              memory: "50Mi"
+              cpu: "50m"
+            limits:
+              memory: "150Mi"
+              cpu: "200m"
+      volumes:
+        - name: config
+          configMap:
+            name: glance-config
+
+---
+# 3. Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: glance
+  namespace: apps
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: glance
+
+---
+# 4. Traefik IngressRoute
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: glance
+  namespace: apps
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`glance.shasame.fr`)
+      kind: Rule
+      services:
+        - name: glance
+          port: 8080
+      middlewares:
+        - name: auth-forward
+          namespace: auth
+  tls:
+    certResolver: default
