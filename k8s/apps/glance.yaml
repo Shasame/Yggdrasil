@@ -10,7 +10,7 @@ data:
       columns: 3
       column_sizes:
         - small
-        - large
+        - full
         - small
 
     theme:
@@ -41,7 +41,7 @@ data:
                 location: "Paris, FR"
                 units: "metric"
                 refresh_interval: 10m
-          - size: large
+          - size: full
             widgets:
               - type: rss
                 title: "Tech News"
