@@ -23,16 +23,15 @@ data:
           - size: small
             widgets:
               - type: bookmarks
-                - title: Homelab
-                  links:
-                    - title: Infra Dashboard
-                      url: https://home.shasame.fr
-                      icon: server
+                title: Homelab
+                links:
+                  - title: Infra Dashboard
+                    url: https://home.shasame.fr
+                    icon: server
               - type: clock
                 title: "Local Time"
                 format: "HH:mm:ss"
                 timezone: "auto"
-
               - type: calendar
                 title: "Calendar"
                 view: "month"
@@ -42,7 +41,7 @@ data:
                 location: "Paris, FR"
                 units: "metric"
                 refresh_interval: 10m
-          - size: large:
+          - size: large
             widgets:
               - type: rss
                 title: "Tech News"
