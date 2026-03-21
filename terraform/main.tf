@@ -5,7 +5,8 @@ resource "proxmox_vm_qemu" "yggdrassil_master" {
     clone = "ubuntu-24-04-template"
     full_clone = true
     vmid = 100
-    memory = 4096
+    memory = 6144
+    balloon = 0
     onboot = true
 
     scsihw = "virtio-scsi-pci"
@@ -62,7 +63,8 @@ resource "proxmox_vm_qemu" "yggdrassil_worker" {
     clone = "ubuntu-24-04-template"
     full_clone = true
     vmid = 100
-    memory = 4096
+    memory = 6144
+    balloon = 0
     onboot = true
 
     scsihw = "virtio-scsi-pci"
