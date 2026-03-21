@@ -22,13 +22,10 @@ data:
         columns:
           - size: small
             widgets:
-              - type: bookmarks
-                groups:
-                  - title: "Infrastructure"
-                    links:
-                      - title: Infra Dashboard
-                        url: https://home.shasame.fr
-                        icon: si:baserow
+              - type: server-stats
+                servers:
+                  - type: local
+                    title: Local Machine
               - type: clock
                 title: "Local Time"
                 format: "HH:mm:ss"
@@ -43,20 +40,14 @@ data:
                 units: "metric"
                 refresh_interval: 10m
           - size: full
-            widgets:
-              - type: split-column
-                widgets:
-                  - type: monitor
-                    cache: 1m
-                    title: Services
-                    sites:
-                      - title: AdGuard Home
-                        url: https://adguard.shasame.fr
-                        icon: si:adguard
-                  - type: server-stats
-                    servers:
-                      - type: local
-                        title: Local Machine
+          widgets:
+                - type: monitor
+                  cache: 1m
+                  title: Services
+                  sites:
+                    - title: AdGuard Home
+                      url: https://adguard.shasame.fr
+                      icon: si:adguard
               - type: rss
                 title: "Tech News"
                 style: horizontal-cards
