@@ -23,11 +23,12 @@ data:
           - size: small
             widgets:
               - type: bookmarks
-                title: Homelab
-                links:
-                  - title: Infra Dashboard
-                    url: https://home.shasame.fr
-                    icon: server
+                groups:
+                  - title: "Infrastructure"
+                    links:
+                      - title: Infra Dashboard
+                        url: https://home.shasame.fr
+                        icon: si:baserow
               - type: clock
                 title: "Local Time"
                 format: "HH:mm:ss"
@@ -38,30 +39,36 @@ data:
                 first_day_of_week: monday
               - type: weather
                 title: "Weather"
-                location: "Paris, FR"
+                location: Paris, France
                 units: "metric"
                 refresh_interval: 10m
           - size: full
             widgets:
               - type: rss
                 title: "Tech News"
-                feed_url: "https://www.reddit.com/r/technology/.rss"
-                max_items: 5
+                style: horizontal-cards
+                feeds:                
+                  - url: "https://www.reddit.com/r/technology/.rss"
+                    title: "Reddit Tech"
               - type: rss
                 title: "DevOps News"
-                feed_url: "https://www.reddit.com/r/devops/.rss"
-                max_items: 5
+                feeds:
+                  - url: "https://www.reddit.com/r/devops/.rss"
+                    title: "Reddit DevOps"
           - size: small
             widgets:
               - type: twitch-channels
                 channels:
+                  - Soldierlol_
                   - Alderiate
                   - TraYtoNlol
               - type: bookmarks
                 title: Music
-                links:
-                  - name: Late-Night Vibes
-                    url: https://www.youtube.com/watch?v=kQ1A85aIzFU&list=RDkQ1A85aIzFU&start_radio=1
+                groups:
+                  - title: "Late-Night Vibes"
+                    links:
+                    - title: Late-Night Vibes
+                      url: https://www.youtube.com/watch?v=kQ1A85aIzFU&list=RDkQ1A85aIzFU&start_radio=1
 ---
 # 2. The Deployment
 apiVersion: apps/v1
