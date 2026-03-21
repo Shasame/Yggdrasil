@@ -47,7 +47,7 @@ data:
               - type: monitor
                 cache: 1m
                 title: Services
-                sites
+                sites:
                   - title: AdGuard Home
                     url: https://adguard.shasame.fr
                     icon: si:adguard
