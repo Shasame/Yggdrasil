@@ -40,14 +40,14 @@ data:
                 units: "metric"
                 refresh_interval: 10m
           - size: full
-          widgets:
-                - type: monitor
-                  cache: 1m
-                  title: Services
-                  sites:
-                    - title: AdGuard Home
-                      url: https://adguard.shasame.fr
-                      icon: si:adguard
+            widgets:
+              - type: monitor
+                cache: 1m
+                title: Services
+                sites:
+                  - title: AdGuard Home
+                    url: https://adguard.shasame.fr
+                    icon: si:adguard
               - type: rss
                 title: "Tech News"
                 style: horizontal-cards
