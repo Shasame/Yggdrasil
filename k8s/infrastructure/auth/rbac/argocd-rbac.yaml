@@ -8,4 +8,3 @@ data:
   scopes: '[groups, email]'
   policy.csv: |
     g, argocd-admins, role:admin
-    g, lldap_admin, role:admin
