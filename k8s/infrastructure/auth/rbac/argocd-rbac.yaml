@@ -7,12 +7,5 @@ data:
   policy.default: role:readonly
   scopes: '[groups, email]'
   policy.csv: |
-    # LDAP group -> Argo role mappings
     g, argocd-admins, role:admin
     g, lldap_admin, role:admin
-
-    # Optional custom role example
-    p, role:dev, applications, get, */*, allow
-    p, role:dev, applications, sync, apps/*, allow
-    p, role:dev, logs, get, */*, allow
-    g, argocd-devs, role:dev
