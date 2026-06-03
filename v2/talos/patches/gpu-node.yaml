@@ -1,0 +1,19 @@
+# patches/gpu-node.yaml
+# Laptop-specific patches — ydl-gpu-node
+# NVIDIA runtime activation — Image Factory provides binaries,
+# these blocks activate the services and load kernel modules at boot.
+
+machine:
+  kubelet:
+    extraMounts: []   # persistent data mounts added here in phase 2
+
+  # --- NVIDIA kernel module loading ---
+  # Talos will not auto-load kernel modules from extensions.
+  # nonfree-kmod-nvidia is correct for RTX 2070 (Turing — no open module support).
+  # This block guarantees the module is present before any NVIDIA service starts.
+  kernel:
+    modules:
+      - name: nvidia
+      - name: nvidia_uvm       # unified virtual memory — required for CUDA
+      - name: nvidia_drm       # direct rendering manager — required for display/offload
+      - name: nvidia_modeset   # modesetting — required by persistenced and CDI gen

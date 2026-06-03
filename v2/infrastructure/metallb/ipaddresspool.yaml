@@ -1,0 +1,23 @@
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: homelab-pool
+  namespace: metallb-system
+  annotations:
+    # This pool is carved from 192.168.1.0/24 outside the DHCP range (1-199)
+    # Expand by editing addresses range — no MetalLB restart required
+spec:
+  addresses:
+    - 192.168.1.205-192.168.1.215
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: homelab-l2
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - homelab-pool
+  # No nodeSelectors needed in single-node phase.
+  # In phase 2: consider pinning L2 announcements to specific nodes
+  # to control which node responds to ARP requests.

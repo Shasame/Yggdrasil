@@ -1,0 +1,24 @@
+# Applied to control plane nodes only
+
+cluster:
+  # ⚠️ Single-node phase only — workloads schedule on the control plane.
+  # Revisit at phase 2 topology review when Mini PCs are added.
+  allowSchedulingOnControlPlanes: true
+
+  etcd:
+    advertisedSubnets:
+      - 192.168.1.0/24   # bind etcd to LAN interface only
+
+  controllerManager:
+    extraArgs:
+      bind-address: 0.0.0.0   # allow Prometheus to scrape metrics from pod network
+
+  scheduler:
+    extraArgs:
+      bind-address: 0.0.0.0
+
+  proxy:
+    disabled: false
+    # ⚠️ Migration marker: when enabling Cilium kube-proxy replacement,
+    # set disabled: true here and update Cilium Helm values.
+    # Plan as its own dedicated change — rolling restart of all nodes.

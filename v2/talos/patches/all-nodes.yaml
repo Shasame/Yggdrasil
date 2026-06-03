@@ -1,0 +1,30 @@
+# Applied to every node — universal production-safe defaults
+
+machine:
+  time:
+    servers:
+      - time.cloudflare.com
+      - 0.pool.ntp.org
+
+  kubelet:
+    extraArgs:
+      # rotate-server-certificates disabled for bootstrap stability.
+      # Re-enable after cluster is fully operational and cert-manager is running.
+      # See: https://github.com/siderolabs/talos/issues/[known bootstrap race]
+      rotate-server-certificates: "false"
+
+  sysctls:
+    # Raise inotify limits — default is too low for many containers running
+    # file watchers simultaneously (ArgoCD, Prometheus, Loki all use these)
+    fs.inotify.max_user_watches: "1048576"
+    fs.inotify.max_user_instances: "8192"
+    # Network connection headroom for Traefik under load
+    net.core.somaxconn: "65535"
+    net.ipv4.ip_local_port_range: "1024 65535"
+
+  network:
+    kubespan:
+      enabled: false    # not using KubeSpan — using Tailscale for overlay
+    interfaces:
+      - interface: enp2s0
+        dhcp: true

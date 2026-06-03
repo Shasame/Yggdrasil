@@ -1,26 +1,52 @@
 # .gitignore
 
-# Local .terraform directories
+# Terraform - applies to all versions (v1, v2, root level)
 **/.terraform/*
-
-# .tfstate files (The Sensitive Data)
 *.tfstate
 *.tfstate.*
-
-# Crash log files
-crash.log
-*.log
-
-# Exclude sensitive variables file
-*.tfvars
-*.auto.tfvars
-
-# Ignore override files
 override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
-
-# Ignore CLI configuration files
 .terraformrc
 terraform.rc
+
+# Terraform Variables (Sensitive Data)
+*.tfvars
+*.auto.tfvars
+
+# Log files
+crash.log
+*.log
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Kubernetes/Talos specific
+kubeconfig
+kubeconfig_*
+talosconfig
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+
+# Unencrypted secrets — never commit these
+talos/talsecret.yaml
+
+# talhelper generated output — regenerate with: talhelper genconfig
+# We commit these so the bootstrap runbook is self-contained
+# but they must never contain unencrypted secret material
+talos/clusterconfig/*.yaml
+talos/clusterconfig/talosconfig

@@ -1,0 +1,15 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tailscale-proxy-shasame-admin
+  # annotations:
+    # Grants cluster-admin to Tailscale GitHub identity via apiServerProxy
+    # Identity format: <username>@<provider> as presented by Tailscale OIDC
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: User
+  name: Shasame@github
+  apiGroup: rbac.authorization.k8s.io

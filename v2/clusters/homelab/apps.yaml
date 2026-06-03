@@ -1,0 +1,30 @@
+# clusters/homelab/apps.yaml
+# The root App of Apps. The single entry point for the entire GitOps tree.
+# This is the last manifest you ever manually kubectl apply — full stop.
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apps
+  namespace: argocd
+  finalizers:
+    # Safe to set here — this finalizer only deletes child Application objects,
+    # not the workloads those Applications manage.
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/YOUR_ORG/yggdrasil.git  # update this
+    targetRevision: main
+    path: apps/argocd-apps
+    directory:
+      recurse: false  # flat for now — set true when you introduce subdirectories
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true     # safe — only prunes Application objects, not workloads
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false

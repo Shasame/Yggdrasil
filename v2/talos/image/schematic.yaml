@@ -1,0 +1,13 @@
+# Talos Image Factory schematic — ydl-gpu-node
+# GPU: NVIDIA RTX 20xx (Turing) — proprietary module track
+# CPU: AMD — amd-ucode microcode
+# Submit with: curl -X POST --data-binary @talos/image/schematic.yaml https://factory.talos.dev/schematics
+
+customization:
+  systemExtensions:
+    officialExtensions:
+      - siderolabs/amd-ucode
+      - siderolabs/nonfree-kmod-nvidia
+      - siderolabs/nvidia-container-toolkit
+      - siderolabs/util-linux-tools
+      - siderolabs/iscsi-tools     

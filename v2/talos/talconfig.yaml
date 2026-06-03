@@ -1,0 +1,46 @@
+# talhelper source of truth — cluster: yggdrasil
+# Regenerate machine configs with: talhelper genconfig
+# Never hand-edit files in clusterconfig/
+
+clusterName: yggdrasil
+talosVersion: v1.13.2
+kubernetesVersion: v1.32.3
+
+# API server endpoint — baked into all node configs and kubeconfig.
+# Matches DHCP reservation for ydl-gpu-node.
+endpoint: https://192.168.1.241:6443
+
+clusterPodNets:
+  - 10.244.0.0/16     # cluster-internal only, never routed on LAN
+clusterSvcNets:
+  - 10.96.0.0/12      # cluster-internal only, never routed on LAN
+
+# No built-in CNI — Cilium is deployed separately post-bootstrap.
+# Node will show NotReady until Cilium is running. This is expected.
+cniConfig:
+  name: none
+
+nodes:
+  - hostname: ydl-gpu-node
+    ipAddress: 192.168.1.241
+    installDisk: /dev/nvme0n1
+
+    # Image Factory URL — schematic ID pins the extension set.
+    # To upgrade Talos: change talosVersion above, keep this ID identical.
+    # To add extensions: new schematic submission → new ID → update here.
+    talosImageURL: factory.talos.dev/installer/f94d6ccfd2bdd87123a1686350355b80fa43cdf73c910d35c0087e0c0e5e9710
+
+    controlPlane: true
+
+    nodeLabels:
+      node-role.kubernetes.io/worker: ""        # allow workload scheduling during single-node phase
+      node.kubernetes.io/instance-type: gaming-laptop
+      topology.kubernetes.io/zone: homelab-a    # prep for multi-node topology awareness
+
+    patches:
+      - "@./patches/gpu-node.yaml"
+
+controlPlane:
+  patches:
+    - "@./patches/all-nodes.yaml"
+    - "@./patches/controlplane.yaml"

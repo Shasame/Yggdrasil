@@ -1,0 +1,47 @@
+# Cilium v1.17.3 — yggdrasil
+# Installed manually for bootstrap — ArgoCD adoption planned post-ArgoCD-install
+# kube-proxy replacement: disabled (migration to full replacement planned phase 2)
+# Hubble: enabled for L3/L4 flow visibility
+
+ipam:
+  mode: kubernetes
+
+# Explicit API server endpoint required for Talos — avoids ClusterIP bootstrap race
+k8sServiceHost: 192.168.1.241
+k8sServicePort: 6443
+
+# kube-proxy kept for now
+# Migration marker: flip to true + set proxy.disabled=true in controlplane patch
+# when ready — plan as dedicated change, rolling restart required
+kubeProxyReplacement: false
+
+# Talos-specific: cgroups are mounted by Talos, not Cilium
+cgroup:
+  autoMount:
+    enabled: false
+  hostRoot: /sys/fs/cgroup
+
+securityContext:
+  capabilities:
+    ciliumAgent:
+      - CHOWN
+      - KILL
+      - NET_ADMIN
+      - NET_RAW
+      - IPC_LOCK
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    cleanCiliumState:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_RESOURCE
+
+hubble:
+  relay:
+    enabled: true
+  ui:
+    enabled: true

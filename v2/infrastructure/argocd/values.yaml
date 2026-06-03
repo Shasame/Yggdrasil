@@ -1,0 +1,74 @@
+# infrastructure/argocd/values.yaml
+# ArgoCD Helm chart — argo/argo-cd version 9.5.15 (app v2.14.x)
+# Bootstrap phase: HTTP only, LoadBalancer via MetalLB
+# TODO: flip server.insecure to false once cert-manager + Traefik are deployed
+
+global:
+  image:
+    tag: "v2.14.11"  # pin app version — never float :latest in GitOps
+
+configs:
+  params:
+    # Disables TLS on the ArgoCD server itself.
+    # Safe during bootstrap because we're LAN-only and MetalLB IP is not internet-exposed.
+    # MUST be set to false once Traefik terminates TLS at the ingress layer.
+    server.insecure: "true"
+
+  cm:
+    # Placeholder — update to your actual ArgoCD hostname once Traefik is up.
+    # ArgoCD uses this for redirect URIs in SSO (Dex) — wrong value here breaks auth later.
+    url: "http://192.168.1.205"
+
+  rbac:
+    # Default deny-all. Explicit grants only.
+    # Production pattern — never leave this as role:admin.
+    policy.default: role:readonly
+
+server:
+  service:
+    type: LoadBalancer
+    # Pin to a specific IP from your MetalLB pool.
+    # Predictable IP = no hunting for where ArgoCD landed after a restart.
+    loadBalancerIP: "192.168.1.205"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+applicationSet:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+controller:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+redis:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
+repoServer:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  # No SOPS/helm-secrets plugin needed — Helm values are not encrypted.
+  # If this changes in a future phase, a dedicated session is warranted
+  # before adding plugin scaffolding back.
