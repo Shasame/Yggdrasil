@@ -7,31 +7,28 @@ metadata:
   name: argocd
   namespace: argocd
   annotations:
-    # Sync wave -1 — ArgoCD reconciles itself before any other application.
     argocd.argoproj.io/sync-wave: "-1"
-  finalizers:
-    # Intentionally empty — do NOT add app-finalizer here.
-    # If this Application were ever accidentally deleted with the finalizer set,
-    # ArgoCD would delete its own namespace and take down all of GitOps.
-    []
+  finalizers: []
 spec:
   project: default
-  source:
-    repoURL: 'https://github.com/Shasame/Yggdrasil.git'
-    targetRevision: main
-    path: v2/infrastructure/argocd
-    helm:
+  sources:                                    # plural — dual-source pattern
+    - repoURL: https://argoproj.github.io/argo-helm
       chart: argo-cd
-      version: "9.5.15"  # must match bootstrap install version exactly
-      valueFiles:
-        - values.yaml
+      targetRevision: "9.5.15"
+      helm:
+        valueFiles:
+          # $values is a reserved alias pointing to the second source below
+          - $values/v2/infrastructure/argocd/values.yaml
+    - repoURL: https://github.com/Shasame/Yggdrasil.git
+      targetRevision: main
+      ref: values                             # defines the $values alias above
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
   syncPolicy:
     automated:
-      prune: false      # Never auto-prune ArgoCD itself — explained below
-      selfHeal: true    # Correct drift, but never delete
+      prune: false
+      selfHeal: true
     syncOptions:
-      - CreateNamespace=false   # namespace pre-exists from bootstrap
-      - ServerSideApply=true    # required for CRD ownership fields in chart v9
+      - CreateNamespace=false
+      - ServerSideApply=true
