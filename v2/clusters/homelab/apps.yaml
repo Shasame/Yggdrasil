@@ -14,9 +14,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/YOUR_ORG/yggdrasil.git  # update this
+    repoURL: 'https://github.com/Shasame/Yggdrasil.git'
     targetRevision: main
-    path: apps/argocd-apps
+    path: v2/apps/argocd-apps
     directory:
       recurse: false  # flat for now — set true when you introduce subdirectories
   destination:

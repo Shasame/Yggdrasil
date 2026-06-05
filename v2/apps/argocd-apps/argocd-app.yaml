@@ -1,7 +1,5 @@
 # apps/argocd-apps/argocd-app.yaml
 # ArgoCD self-management Application.
-# After this is applied, Git is the source of truth for ArgoCD itself.
-# The last thing you manually kubectl apply in this namespace.
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -19,9 +17,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/YOUR_ORG/yggdrasil.git  # update this
+    repoURL: 'https://github.com/Shasame/Yggdrasil.git'
     targetRevision: main
-    path: infrastructure/argocd
+    path: v2/infrastructure/argocd
     helm:
       chart: argo-cd
       version: "9.5.15"  # must match bootstrap install version exactly
