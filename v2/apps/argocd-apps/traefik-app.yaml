@@ -36,4 +36,3 @@ spec:
       # CRDs are bundled in the Traefik chart.
       # Replace ensures they are updated on chart upgrades.
       - Replace=true
-      - ServerSideApply=true

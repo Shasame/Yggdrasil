@@ -71,6 +71,9 @@ providers:
     # so other controllers (and ArgoCD) can see the assigned IP.
     publishedService:
       enabled: true
+  
+  kubernetesGateway:
+    enabled: false 
 
 # ============================================================
 # TLS Options (global defaults)
