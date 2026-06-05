@@ -1,0 +1,39 @@
+# Sync wave 2: after cert-manager and issuers are healthy.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: traefik
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  sources:
+    # Source 1: Helm chart from the Traefik repository.
+    - repoURL: https://traefik.github.io/charts
+      chart: traefik
+      targetRevision: 33.2.0
+
+      helm:
+        valueFiles:
+          - $values/infrastructure/traefik/values.yaml
+
+    # Source 2: Git repository — provides values.yaml.
+    - repoURL: https://github.com/Shasame/Yggdrasil.git
+      targetRevision: HEAD
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: traefik
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # CRDs are bundled in the Traefik chart.
+      # Replace ensures they are updated on chart upgrades.
+      - Replace=true
+      - ServerSideApply=true

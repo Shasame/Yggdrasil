@@ -1,0 +1,39 @@
+# Sync wave 0: must be fully healthy before issuers (wave 1) are applied.
+# cert-manager's webhook must be ready before any Certificate or Issuer
+# resource is created — otherwise the webhook admission check will reject them.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  sources:
+    - repoURL: https://charts.jetstack.io
+      chart: cert-manager
+      targetRevision: v1.17.2
+
+      helm:
+        valueFiles:
+          - $values/infrastructure/cert-manager/values.yaml
+
+    - repoURL: https://github.com/Shasame/Yggdrasil.git
+      targetRevision: HEAD
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # Replace (not patch) CRDs on sync. Required because Helm cannot
+      # update CRDs it already owns — ArgoCD's Replace option handles this.
+      - Replace=true
+      - ServerSideApply=true

@@ -1,0 +1,23 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    # Let's Encrypt staging endpoint — unlimited retries, untrusted CA.
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+
+    email: shasame09@gmail.com
+
+    privateKeySecretRef:
+      name: letsencrypt-staging-account-key
+
+    solvers:
+      - dns01:
+          cloudflare:
+            # Reference to the manually-created Secret containing the
+            # Cloudflare API token. See session notes for creation command.
+            # Secret must live in the cert-manager namespace.
+            apiTokenSecretRef:
+              name: cloudflare-api-token-secret
+              key: api-token

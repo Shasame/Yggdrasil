@@ -1,0 +1,42 @@
+# cert-manager Helm values
+# Chart: jetstack/cert-manager v1.17.2
+# https://artifacthub.io/packages/helm/cert-manager/cert-manager
+
+# Install CRDs as part of the Helm release.
+# ArgoCD's "Replace" sync option is set on the Application to handle
+# CRD upgrades correctly (Helm cannot update CRDs it already owns).
+crds:
+  enabled: true
+
+replicaCount: 1
+
+prometheus:
+  enabled: true
+  servicemonitor:
+    # Set to true once kube-prometheus-stack is deployed.
+    enabled: false
+
+# Resource limits: conservative for a single-node laptop.
+# cert-manager is not latency-sensitive — it runs in the background.
+resources:
+  requests:
+    cpu: 10m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
+
+webhook:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+
+cainjector:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
