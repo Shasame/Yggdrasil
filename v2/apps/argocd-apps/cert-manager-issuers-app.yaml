@@ -11,7 +11,7 @@ spec:
   source:
     repoURL: https://github.com/Shasame/Yggdrasil.git
     targetRevision: HEAD
-    path: infrastructure/cert-manager/issuers
+    path: v2/infrastructure/cert-manager/issuers
 
   destination:
     server: https://kubernetes.default.svc

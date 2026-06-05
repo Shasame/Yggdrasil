@@ -16,7 +16,7 @@ spec:
 
       helm:
         valueFiles:
-          - $values/infrastructure/traefik/values.yaml
+          - $values/v2/infrastructure/traefik/values.yaml
 
     # Source 2: Git repository — provides values.yaml.
     - repoURL: https://github.com/Shasame/Yggdrasil.git
