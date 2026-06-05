@@ -1,0 +1,33 @@
+# apps/argocd-apps/metallb-config-app.yaml
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: metallb-config
+  namespace: argocd
+  annotations:
+    # Wave 2 — must run after metallb (wave 1) has established the CRDs.
+    # IPAddressPool and L2Advertisement CRDs don't exist until the chart is synced.
+    argocd.argoproj.io/sync-wave: "2"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Shasame/Yggdrasil.git
+    targetRevision: main
+    path: v2/infrastructure/metallb
+    directory:
+      # Only pick up the CR manifests — exclude values.yaml which is
+      # for the Helm chart and has no meaning as a standalone manifest.
+      exclude: "values.yaml"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: metallb-system
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false   # namespace created by metallb-app
+      - ServerSideApply=true
