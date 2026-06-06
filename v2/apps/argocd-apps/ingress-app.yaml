@@ -13,12 +13,12 @@ spec:
   source:
     repoURL: https://github.com/Shasame/Yggdrasil.git
     targetRevision: HEAD
-    path: v2/infrastructure
+    path: v2/infrastructure/argocd
     # Only sync the ingress manifests — not values.yaml (that's for the
     # argocd chart Application via dual-source). We use an include filter
     # to be explicit about what this Application owns.
     directory:
-      include: "argocd/ingressroute.yaml"
+      include: "ingressroute.yaml"
 
   destination:
     server: https://kubernetes.default.svc
