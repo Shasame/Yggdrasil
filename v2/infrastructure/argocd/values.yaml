@@ -15,9 +15,7 @@ configs:
     server.insecure: "true"
 
   cm:
-    # Placeholder — update to your actual ArgoCD hostname once Traefik is up.
-    # ArgoCD uses this for redirect URIs in SSO (Dex) — wrong value here breaks auth later.
-    url: "http://192.168.1.205"
+    url: "https://argocd.home.shasame.fr"
 
   rbac:
     # Default deny-all. Explicit grants only.
@@ -26,10 +24,7 @@ configs:
 
 server:
   service:
-    type: LoadBalancer
-    # Pin to a specific IP from your MetalLB pool.
-    # Predictable IP = no hunting for where ArgoCD landed after a restart.
-    loadBalancerIP: "192.168.1.205"
+    type: ClusterIP
 
   resources:
     requests:

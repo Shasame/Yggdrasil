@@ -1,0 +1,31 @@
+# First sync will trigger a DNS-01 challenge against Let's Encrypt
+# production. Ensure the Cloudflare API token Secret exists in the
+# cert-manager namespace before syncing.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: certificates
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Shasame/Yggdrasil.git
+    targetRevision: HEAD
+    path: v2/infrastructure/cert-manager/certificates
+
+  destination:
+    server: https://kubernetes.default.svc
+    # Certificate CRs are namespace-scoped — this sets the target namespace.
+    # The cert Secret will be written to the traefik namespace as specified
+    # in each Certificate's spec.secretName (cert-manager honours the
+    # namespace of the Certificate resource, not this field).
+    namespace: traefik
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false

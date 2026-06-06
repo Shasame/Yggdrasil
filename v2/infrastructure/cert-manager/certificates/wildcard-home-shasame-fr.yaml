@@ -1,0 +1,21 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-home-shasame-fr
+  # The Certificate CR lives in traefik — cert-manager watches all namespaces.
+  namespace: traefik
+spec:
+  # The Secret name that Traefik IngressRoutes will reference.
+  secretName: wildcard-home-shasame-fr-tls
+
+  issuerRef:
+    name: letsencrypt-production
+    kind: ClusterIssuer
+
+  # Wildcard covers *.home.shasame.fr (argocd, grafana, etc.)
+  # The apex home.shasame.fr is included as a SAN in case it's needed later.
+  dnsNames:
+    - "home.shasame.fr"
+    - "*.home.shasame.fr"
+
+  # cert-manager will auto-renew 30 days before expiry (LE certs last 90 days).
