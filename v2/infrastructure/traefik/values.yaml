@@ -1,34 +1,59 @@
-# Traefik Helm values
-# Chart: traefik/traefik v33.2.0  →  Traefik Proxy v3.3.x
-# https://artifacthub.io/packages/helm/traefik/traefik
-
 # ============================================================
 # Deployment
 # ============================================================
 deployment:
-  replicas: 1
+  replicas: 1  # Single-node phase. Scale when Mini PCs join.
+
+# ============================================================
+# Gateway API — DISABLED
+# ============================================================
+# Cilium already owns the Gateway API CRDs (gatewayclasses, gateways,
+# httproutes, grpcroutes, referencegrants). These three blocks must ALL
+# be explicitly disabled — chart defaults have gateway and gatewayClass
+# enabled:true regardless of the provider flag below.
+gateway:
+  enabled: false  # Do not deploy a Gateway CR (requires Gateway API CRDs)
+
+gatewayClass:
+  enabled: false  # Do not deploy a GatewayClass CR
+
+providers:
+  kubernetesCRD:
+    enabled: true
+    # IngressRoute can only reference services in its own namespace.
+    allowCrossNamespace: false
+    # Allow ExternalName services — needed for some cross-namespace patterns.
+    allowExternalNameServices: true
+
+  kubernetesIngress:
+    enabled: true
+    # Publish Traefik's LoadBalancer IP to Ingress .status.loadBalancer
+    # so ArgoCD and other controllers can see the assigned IP.
+    publishedService:
+      enabled: true
+
+  kubernetesGateway:
+    # Gateway API provider disabled — Cilium owns these CRDs.
+    enabled: false
 
 # ============================================================
 # Entry Points
 # ============================================================
-# Two entry points: web (80, redirect-only) and websecure (443, TLS termination).
-# All real traffic flows through websecure. web exists solely to redirect
-# HTTP clients — never serve content over plain HTTP.
 ports:
   web:
-    port: 8000        # Internal container port
+    port: 8000
     expose:
       default: true
-    exposedPort: 80   # External port via LoadBalancer
+    exposedPort: 80
     protocol: TCP
     # Redirect all HTTP → HTTPS at the entry point level.
-    # This is more efficient than per-route middleware because it fires
-    # before any routing decision is made.
-    redirections:
-      entryPoint:
-        to: websecure
-        scheme: https
-        permanent: true  # 301, not 302 — clients will cache this
+    # Fires before any routing decision — more efficient than per-route middleware.
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true  # 301 — clients will cache this redirect
 
   websecure:
     port: 8443
@@ -36,52 +61,31 @@ ports:
       default: true
     exposedPort: 443
     protocol: TCP
-    http2:
-      maxConcurrentStreams: 250
-    tls:
-      enabled: true  # TLS termination at this entry point
+    http:
+      tls:
+        # TLS termination at this entry point.
+        enabled: true
 
 # ============================================================
 # Service (MetalLB integration)
 # ============================================================
+# v40 schema change: LoadBalancer type is set under service.spec, not service.type.
 service:
-  type: LoadBalancer
-  loadBalancerIP: "192.168.1.206" #Update requires DNS updates
-
-# ============================================================
-# Providers
-# ============================================================
-providers:
-  # KubernetesCRD: watches IngressRoute, Middleware, etc.
-  # This is the primary routing mechanism for this cluster.
-  kubernetesCRD:
-    enabled: true
-    # allowCrossNamespace: false by default — IngressRoute can only reference
-    # services in its own namespace. Set true only if you have a specific need.
-    allowCrossNamespace: false
-    # Allow IngressRoutes to use ExternalName services (needed for some
-    # cross-namespace routing patterns with Tailscale later).
-    allowExternalNameServices: true
-
-  # KubernetesIngress: watches standard Ingress resources.
-  # Keep enabled — some Helm charts only emit Ingress, not IngressRoute.
-  kubernetesIngress:
-    enabled: true
-    # Publish the Traefik LoadBalancer IP to Ingress .status.loadBalancer
-    # so other controllers (and ArgoCD) can see the assigned IP.
-    publishedService:
-      enabled: true
-  
-  kubernetesGateway:
-    enabled: false 
+  enabled: true
+  spec:
+    type: LoadBalancer
+    # Pin Traefik to 192.168.1.206 from the MetalLB pool.
+    # This frees .205 from ArgoCD once the IngressRoute migration is done.
+    # Do not change this after first deploy without coordinating DNS updates.
+    loadBalancerIP: "192.168.1.206"
 
 # ============================================================
 # TLS Options (global defaults)
 # ============================================================
+# Defined as TLSOption CRDs by the chart.
 tlsOptions:
   default:
-    # Enforce TLS 1.2 minimum. TLS 1.0/1.1 are broken — never enable.
-    # TLS 1.3 is preferred but 1.2 is needed for some older clients.
+    # TLS 1.2 minimum. TLS 1.0/1.1 are broken — never enable.
     minVersion: VersionTLS12
     sniStrict: true  # Reject connections with no SNI — hardens the entry point
 
@@ -90,20 +94,21 @@ tlsOptions:
 # ============================================================
 logs:
   general:
-    level: INFO  # Switch to DEBUG temporarily when diagnosing cert issues
+    level: INFO  # Switch to DEBUG temporarily when diagnosing cert or routing issues
   access:
-    enabled: true  # Access logs — essential for debugging routing problems
+    enabled: true  # Essential for debugging routing problems
 
 # ============================================================
 # Metrics (Prometheus)
 # ============================================================
+# Hooks are wired now so the observability stack (phase 2) can scrape
+# without requiring a chart upgrade.
 metrics:
   prometheus:
     enabled: true
-    # ServiceMonitor will be enabled once kube-prometheus-stack is deployed.
     serviceMonitor:
+      # Flip to true once kube-prometheus-stack is deployed.
       enabled: false
-    # Expose per-entry-point and per-service metrics.
     addEntryPointsLabels: true
     addServicesLabels: true
     addRoutersLabels: true
@@ -111,22 +116,31 @@ metrics:
 # ============================================================
 # Dashboard
 # ============================================================
-# The Traefik dashboard is useful for debugging routing.
-# Expose it only via an IngressRoute scoped to Tailscale — never public.
-# We will add the IngressRoute for the dashboard in a follow-up session
-# once Tailscale ingress is configured.
+# Auto-generated IngressRoute disabled — it has no authentication.
+# A properly auth-protected IngressRoute will be added once
+# Dex + OAuth2 Proxy are deployed.
 ingressRoute:
   dashboard:
-    enabled: false  # Disable the auto-generated IngressRoute (no auth on it)
-                    # We will create a properly auth-protected one manually
+    enabled: false
 
 api:
-  dashboard: true  # Keep the dashboard API enabled — just not auto-exposed
+  dashboard: true  # Dashboard API kept enabled, just not exposed yet
+
+# ============================================================
+# RBAC / ServiceAccount
+# ============================================================
+rbac:
+  enabled: true
+
+# Empty string = chart auto-generates name from fullname template ("traefik").
+# Do not set a custom name — let the chart own the ServiceAccount lifecycle.
+serviceAccount:
+  name: ""
 
 # ============================================================
 # Resources
 # ============================================================
-# Traefik is in the hot path for all HTTP traffic — give it guaranteed CPU.
+# Traefik is in the hot path for all HTTP traffic — guaranteed CPU request.
 resources:
   requests:
     cpu: 50m
@@ -135,27 +149,20 @@ resources:
     memory: 256Mi
 
 # ============================================================
-# RBAC / ServiceAccount
-# ============================================================
-rbac:
-  enabled: true
-
-serviceAccount:
-  name: traefik
-
-# ============================================================
 # Security Context
 # ============================================================
-# Traefik v3 no longer needs to bind privileged ports directly —
-# it uses the exposedPort mapping via the LoadBalancer Service.
-# Running as non-root is safe and correct.
+# v40 schema change: runAsUser/runAsNonRoot live in podSecurityContext.
+# securityContext covers container-level capabilities only.
 securityContext:
+  allowPrivilegeEscalation: false
   capabilities:
     drop:
       - ALL
   readOnlyRootFilesystem: true
-  runAsNonRoot: true
-  runAsUser: 65532
 
 podSecurityContext:
-  fsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
