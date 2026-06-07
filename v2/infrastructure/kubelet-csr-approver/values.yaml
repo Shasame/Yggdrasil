@@ -24,7 +24,7 @@ providerIpPrefixes:
 # Maximum cert lifetime that will be approved.
 # 367 days = just over 1 year, matching kubelet cert rotation defaults.
 # A CSR requesting a longer lifetime will be denied.
-maxExpirationSeconds: 31708800  # 367 days
+maxExpirationSeconds: "31708800"  # 367 days — quoted to prevent YAML converting large int to scientific notation
 
 # bypassDnsResolution: when true, skips the DNS lookup check on the CSR's
 # requested hostname. Set true because on Talos, the kubelet may submit its
