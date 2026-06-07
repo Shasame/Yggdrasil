@@ -1,0 +1,43 @@
+# Purpose: automatically approve kubelet serving CertificateSigningRequests
+# so that Metrics Server can verify kubelet TLS certs without --kubelet-insecure-tls.
+#
+# Security model: kubelet-csr-approver validates each CSR against configurable
+# checks before approving — it does not blindly approve all CSRs. The two
+# critical checks for this cluster are:
+#   1. providerRegex — the CSR's requested DNS name must match this pattern
+#   2. providerIpPrefixes — the CSR's requested IP must fall within this CIDR
+# A CSR that fails either check is denied, preventing an attacker from getting
+# a signed cert for an arbitrary hostname or IP.
+
+# Only approve CSRs whose requested hostname matches this regex.
+# ydl-gpu-node is the only node in the cluster during single-node phase.
+# When Mini PCs join (phase 2), extend this regex to match their hostnames.
+# Pattern: matches 'ydl-gpu-node' and any future nodes you add to Yggdrasil.
+providerRegex: ^ydl-gpu-node$
+
+# Only approve CSRs whose requested IP falls within this prefix.
+# Scoped to your LAN subnet — a CSR requesting an IP outside 192.168.1.0/24
+# will be denied even if the hostname matches.
+providerIpPrefixes:
+  - 192.168.1.0/24
+
+# Maximum cert lifetime that will be approved.
+# 367 days = just over 1 year, matching kubelet cert rotation defaults.
+# A CSR requesting a longer lifetime will be denied.
+maxExpirationSeconds: 31708800  # 367 days
+
+# bypassDnsResolution: when true, skips the DNS lookup check on the CSR's
+# requested hostname. Set true because on Talos, the kubelet may submit its
+# CSR before the node's hostname is resolvable via cluster DNS.
+bypassDnsResolution: true
+
+# Run in kube-system — this is a cluster infrastructure component,
+# not an application. Same namespace as other cluster-level controllers.
+# (Namespace is set in the Application manifest, not here.)
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    memory: 64Mi

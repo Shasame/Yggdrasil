@@ -1,0 +1,42 @@
+# Deploys the kubelet CSR auto-approver to kube-system.
+# Must be deployed and healthy before Metrics Server, because Metrics Server
+# needs valid kubelet serving certs — which requires CSRs to be approved first.
+#
+# Sync wave 1: after base cluster components (wave 0), before Metrics Server (wave 2).
+#
+# OCI chart source — dual-source pattern applies as always.
+# Note: ghcr.io OCI registry requires oci:// prefix in repoURL.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kubelet-csr-approver
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  sources:
+    - repoURL: https://postfinance.github.io/kubelet-csr-approver
+      chart: kubelet-csr-approver
+      targetRevision: v1.2.14
+
+      helm:
+        valueFiles:
+          - $values/v2/infrastructure/kubelet-csr-approver/values.yaml
+
+    - repoURL: https://github.com/Shasame/Yggdrasil.git
+      targetRevision: HEAD
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    # kube-system: this is cluster infrastructure, not an application.
+    # Running alongside kube-proxy, CoreDNS, and other cluster controllers.
+    namespace: kube-system
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false  # kube-system already exists
