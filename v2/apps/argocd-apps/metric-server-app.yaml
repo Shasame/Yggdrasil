@@ -1,0 +1,32 @@
+# metric server Application.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: metric-server
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  finalizers: []
+spec:
+  project: default
+  sources:                                    # plural — dual-source pattern
+    - repoURL: https://kubernetes-sigs.github.io/metrics-server/
+      chart: metrics-server
+      targetRevision: "3.13.0"
+      helm:
+        valueFiles:
+          # $values is a reserved alias pointing to the second source below
+          - $values/v2/infrastructure/metric-server/values.yaml
+    - repoURL: https://github.com/Shasame/Yggdrasil.git
+      targetRevision: main
+      ref: values                             # defines the $values alias above
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
