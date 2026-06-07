@@ -1,24 +1,17 @@
-# Metrics Server exposes the Kubernetes Resource Metrics API — the API that
-# powers `kubectl top nodes`, `kubectl top pods`, and HPA/VPA controllers.
-# It is NOT a replacement for Prometheus — it holds only the latest sample
-# with no history, no query language, and no dashboards.
-# When Prometheus is deployed (observability session), it scrapes kubelets
-# directly and the two coexist without conflict.
-
 args:
-  # kubelet-csr-approver ensures kubelet serving certs are properly signed,
-  # so Metrics Server can verify them. This is the production pattern.
-  #
-  # Prefer internal IP for kubelet address resolution — more reliable than
-  # hostname resolution on Talos during initial node startup.
   - --kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP
+  # Talos-specific: Talos does not populate the requestheader-client-ca-file
+  # configmap in the way the aggregation layer expects. Without this flag,
+  # Metrics Server blocks after cache sync waiting to validate the requestheader
+  # CA — which never completes on Talos. Setting it empty bypasses that check.
+  # This does NOT affect kubelet TLS verification (still enforced via
+  # properly signed kubelet certs from kubelet-csr-approver).
+  - --requestheader-client-ca-file=
+  # Verbosity level 2 — shows scrape attempts and errors without being noisy.
+  # Remove once metrics are confirmed working.
+  - --v=2
 
-# Single replica — fine for single-node phase.
-# Metrics Server is not latency-sensitive; a brief restart is acceptable.
 replicas: 1
-
-# metrics-server must be able to reach kubelets on port 10250.
-# On Talos this is the default kubelet port — no override needed.
 
 resources:
   requests:
@@ -27,17 +20,9 @@ resources:
   limits:
     memory: 64Mi
 
-# metrics-server registers itself as an APIService (v1beta1.metrics.k8s.io).
-# The apiService block controls this registration.
 apiService:
-  # Create the APIService resource — required for kubectl top to work.
   create: true
-  # With kubelet-csr-approver in place, kubelet certs are properly signed.
-  # insecureSkipTLSVerify must be false — this is the whole point of the
-  # clean path we chose over --kubelet-insecure-tls.
   insecureSkipTLSVerify: false
 
-# Prometheus metrics hook — enable now so the observability stack (phase 2)
-# can scrape Metrics Server without a chart upgrade.
 serviceMonitor:
   enabled: false  # flip to true once kube-prometheus-stack is deployed
