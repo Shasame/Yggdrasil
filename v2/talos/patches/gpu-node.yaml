@@ -5,7 +5,24 @@
 
 machine:
   kubelet:
-    extraMounts: []   # persistent data mounts added here in phase 2
+    extraMounts:
+    # Local-path-provisioner working directory.
+      - destination: /var/mnt/local-path-provisioner
+        type: bind
+        source: /var/mnt/local-path-provisioner
+        options:
+          - bind
+          - rshared
+          - rw
+
+    # Shared media library — arr stack writes here, Jellyfin reads. NFS exported when extra node joins cluster.
+      - destination: /var/mnt/media
+        type: bind
+        source: /var/mnt/media
+        options:
+          - bind
+          - rshared
+          - rw
 
   # --- NVIDIA kernel module loading ---
   # Talos will not auto-load kernel modules from extensions.

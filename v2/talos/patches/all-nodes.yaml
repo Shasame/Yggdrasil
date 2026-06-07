@@ -8,10 +8,7 @@ machine:
 
   kubelet:
     extraArgs:
-      # rotate-server-certificates disabled for bootstrap stability.
-      # Re-enable after cluster is fully operational and cert-manager is running.
-      # See: https://github.com/siderolabs/talos/issues/[known bootstrap race]
-      rotate-server-certificates: "false"
+      rotate-server-certificates: "true"
 
   sysctls:
     # Raise inotify limits — default is too low for many containers running
