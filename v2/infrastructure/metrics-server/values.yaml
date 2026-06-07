@@ -22,7 +22,7 @@ resources:
 
 apiService:
   create: true
-  insecureSkipTLSVerify: false
+  insecureSkipTLSVerify: true
 
 serviceMonitor:
   enabled: false  # flip to true once kube-prometheus-stack is deployed
