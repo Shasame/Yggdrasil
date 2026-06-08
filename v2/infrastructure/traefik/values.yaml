@@ -166,3 +166,8 @@ podSecurityContext:
   runAsGroup: 65532
   seccompProfile:
     type: RuntimeDefault
+
+tlsStore:
+  default:
+    defaultCertificate:
+      secretName: wildcard-home-shasame-fr-tls
