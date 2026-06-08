@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: local-path-provisioner
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  sources:
+    - repoURL: ghcr.io/rancher/local-path-provisioner
+      chart: local-path-provisioner
+      targetRevision: v0.0.36
+      helm:
+        valueFiles:
+          - $values/v2/infrastructure/local-path-provisioner/values.yaml
+    - repoURL: https://github.com/Shasame/Yggdrasil.git
+      targetRevision: HEAD
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: local-path-provisioner
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
