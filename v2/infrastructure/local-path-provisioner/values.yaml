@@ -1,0 +1,20 @@
+# Pin to the security-patched release (fixes HelperPod template injection CVE)
+image:
+  tag: v0.0.36
+
+storageClass:
+  # Named explicitly so PVCs can reference it by name.
+  # 'local-path' is the conventional name — don't change without updating all PVCs.
+  name: local-path
+  # Default SC for the cluster — PVCs without storageClassName get this.
+  defaultClass: true
+  # Delay PV creation until pod scheduling — correct for multi-node future.
+  # On single node today this makes no practical difference, but set it right now.
+  reclaimPolicy: Delete
+  volumeBindingMode: WaitForFirstConsumer
+
+# Point provisioner at the extraMounts path — NOT /opt (read-only on Talos)
+nodePathMap:
+  - node: DEFAULT
+    paths:
+      - /var/mnt/local-path-provisioner
