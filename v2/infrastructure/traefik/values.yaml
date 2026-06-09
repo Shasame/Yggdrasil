@@ -65,6 +65,10 @@ ports:
       tls:
         # TLS termination at this entry point.
         enabled: true
+        domains:
+          - main: "home.shasame.fr"
+            sans:
+              - "*.home.shasame.fr"
 
 # ============================================================
 # Service (MetalLB integration)
@@ -87,7 +91,7 @@ tlsOptions:
   default:
     # TLS 1.2 minimum. TLS 1.0/1.1 are broken — never enable.
     minVersion: VersionTLS12
-    sniStrict: true  # Reject connections with no SNI — hardens the entry point
+    sniStrict: false  # Reject connections with no SNI — hardens the entry point
 
 # ============================================================
 # Logging
