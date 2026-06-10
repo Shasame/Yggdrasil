@@ -1,0 +1,23 @@
+# RuntimeClass enables GPU containers to use the NVIDIA container runtime.
+# Without this, the container runtime doesn't know to inject NVIDIA libraries.
+runtimeClassName: nvidia
+
+# Node selector — only run on nodes with the GPU label.
+# We'll apply this label to ydl-gpu-node after deploy.
+nodeSelector:
+  feature.node.kubernetes.io/pci-10de.present: "true"
+
+# Tolerations for the GPU taint we'll apply post-deploy.
+# Added now so the plugin itself can still schedule on a tainted node.
+tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+
+# Resource limits for the plugin pod itself — it's lightweight.
+resources:
+  limits:
+    memory: 128Mi
+  requests:
+    cpu: 10m
+    memory: 64Mi
