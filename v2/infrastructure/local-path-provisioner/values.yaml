@@ -15,6 +15,6 @@ storageClass:
 
 # Point provisioner at the extraMounts path — NOT /opt (read-only on Talos)
 nodePathMap:
-  - node: DEFAULT
+  - node: ydl-gpu-node
     paths:
       - /var/mnt/local-path-provisioner
