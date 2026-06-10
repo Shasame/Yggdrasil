@@ -26,3 +26,8 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+    managedNamespaceMetadata:
+      labels:
+        # local-path-provisioner spawns helper pods with hostPath volumes
+        # into this namespace to create PVC directories. Requires privileged.
+        pod-security.kubernetes.io/enforce: privileged
