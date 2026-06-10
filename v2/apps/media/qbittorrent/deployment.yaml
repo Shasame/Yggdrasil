@@ -64,13 +64,13 @@ spec:
               name: gluetun-api
           readinessProbe:
             httpGet:
-              path: /v1/openvpn/status
+              path: /v1/vpn/status
               port: 8000
             initialDelaySeconds: 10
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /v1/openvpn/status
+              path: /v1/vpn/status
               port: 8000
             initialDelaySeconds: 30
             periodSeconds: 30
