@@ -8,9 +8,9 @@ metadata:
 spec:
   project: default
   sources:
-    - repoURL: ghcr.io/rancher/local-path-provisioner
+    - repoURL: https://charts.containeroo.ch
       chart: local-path-provisioner
-      targetRevision: v0.0.36
+      targetRevision: 0.0.37
       helm:
         valueFiles:
           - $values/v2/infrastructure/local-path-provisioner/values.yaml
