@@ -1,6 +1,8 @@
 # RuntimeClass enables GPU containers to use the NVIDIA container runtime.
 # Without this, the container runtime doesn't know to inject NVIDIA libraries.
 runtimeClassName: nvidia
+runtimeClass:
+  enabled: true
 
 # Node selector — only run on nodes with the GPU label.
 # We'll apply this label to ydl-gpu-node after deploy.
