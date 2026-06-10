@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - ingressroutes.yaml
+  - prowlarr/pvc.yaml
+  - prowlarr/deployment.yaml
+  - prowlarr/service.yaml
+  - sonarr/pvc.yaml
+  - sonarr/deployment.yaml
+  - sonarr/service.yaml
+  - radarr/pvc.yaml
+  - radarr/deployment.yaml
+  - radarr/service.yaml
+  - bazarr/pvc.yaml
+  - bazarr/deployment.yaml
+  - bazarr/service.yaml
+  - qbittorrent/pvc.yaml
+  - qbittorrent/deployment.yaml
+  - qbittorrent/service.yaml
+  - jellyfin/pvc.yaml
+  - jellyfin/deployment.yaml
+  - jellyfin/service.yaml
