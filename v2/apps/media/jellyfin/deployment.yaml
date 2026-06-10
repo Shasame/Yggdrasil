@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyfin
+  namespace: media
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: jellyfin
+  template:
+    metadata:
+      labels:
+        app: jellyfin
+    spec:
+      # Required to use the NVIDIA container runtime.
+      # nvidia-device-plugin provisions the GPU device into the container.
+      runtimeClassName: nvidia
+      containers:
+        - name: jellyfin
+          # Check current: https://fleet.linuxserver.io/image?name=linuxserver/jellyfin
+          image: ghcr.io/linuxserver/jellyfin:10.11.11ubu2404-ls36
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "Europe/Paris"
+            # Tells Jellyfin to use NVENC for hardware transcoding.
+            # Must also be enabled in Jellyfin UI:
+            #   Dashboard → Playback → Hardware acceleration → NVENC
+            - name: JELLYFIN_PublishedServerUrl
+              value: "https://jellyfin.home.shasame.fr"
+          ports:
+            - containerPort: 8096
+              name: http
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: media
+              # Read-only — Jellyfin consumes the library, never writes to it.
+              mountPath: /media
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8096
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              memory: 4Gi
+              # GPU resource request — device plugin enforces exclusive access.
+              # Remove this block to fall back to software transcoding.
+              nvidia.com/gpu: 1
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: jellyfin-config
+        - name: media
+          hostPath:
+            path: /var/mnt/media
+            type: Directory

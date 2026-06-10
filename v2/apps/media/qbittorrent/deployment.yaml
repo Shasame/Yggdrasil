@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qbittorrent
+  namespace: media
+spec:
+  replicas: 1
+  strategy:
+    # Recreate mandatory — shared network namespace means two pods with same
+    # WireGuard key would cause tunnel conflicts and split-brain.
+    type: Recreate
+  selector:
+    matchLabels:
+      app: qbittorrent
+  template:
+    metadata:
+      labels:
+        app: qbittorrent
+    spec:
+      # Required for Gluetun's WireGuard kernel module access and
+      # iptables kill-switch manipulation.
+      # NET_ADMIN: manage network interfaces and routes
+      # SYS_MODULE: load wireguard kernel module (may be needed on some kernels)
+      initContainers: []
+      containers:
+        # --- Gluetun: VPN tunnel + kill-switch ---
+        # Must be listed first — it owns the network namespace.
+        # qBittorrent inherits its network stack.
+        - name: gluetun
+          # Check current: https://github.com/qdm12/gluetun/releases
+          image: ghcr.io/qdm12/gluetun:v3.40.0
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+          env:
+            - name: VPN_SERVICE_PROVIDER
+              value: "protonvpn"
+            - name: VPN_TYPE
+              value: "wireguard"
+            - name: SERVER_COUNTRIES
+              value: "Switzerland"
+            - name: FIREWALL_OUTBOUND_SUBNETS
+              # Allow traffic to cluster service CIDR so arr services can reach
+              # qBittorrent's HTTP API without going through the VPN.
+              value: "10.96.0.0/12"
+            - name: WIREGUARD_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gluetun-vpn-credentials
+                  key: WIREGUARD_PRIVATE_KEY
+            - name: WIREGUARD_ADDRESSES
+              valueFrom:
+                secretKeyRef:
+                  name: gluetun-vpn-credentials
+                  key: WIREGUARD_ADDRESSES
+          ports:
+            # Gluetun exposes qBittorrent's port — shared netns means Service
+            # traffic hits Gluetun's network stack, which forwards to qBittorrent.
+            - containerPort: 8080
+              name: qbt-http
+            # Gluetun control API — used for health checks and status
+            - containerPort: 8000
+              name: gluetun-api
+          readinessProbe:
+            httpGet:
+              path: /v1/openvpn/status
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /v1/openvpn/status
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+
+        # --- qBittorrent: download client ---
+        # Shares network namespace with Gluetun — sees VPN interface only.
+        - name: qbittorrent
+          # Check current: https://fleet.linuxserver.io/image?name=linuxserver/qbittorrent
+          image: ghcr.io/linuxserver/qbittorrent:5.1.4-r3-ls453
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "Europe/Paris"
+            - name: WEBUI_PORT
+              value: "8080"
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: media
+              mountPath: /media
+          # No ports declared here — Gluetun owns the network namespace and
+          # declares the ports on behalf of the shared pod network.
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: qbittorrent-config
+        - name: media
+          hostPath:
+            path: /var/mnt/media
+            type: Directory

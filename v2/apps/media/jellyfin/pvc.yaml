@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jellyfin-config
+  namespace: media
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      # Jellyfin stores metadata, thumbnails, and transcoding cache here.
+      # More generous than arr services — image cache grows over time.
+      storage: 20Gi

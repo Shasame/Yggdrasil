@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: media
+  labels:
+    # privileged PSA required: hostPath volumes (media library + downloads)
+    # and Gluetun NET_ADMIN capability both require this.
+    # Revisit when phase 2 introduces a proper CSI driver (Longhorn/NFS).
+    pod-security.kubernetes.io/enforce: privileged
