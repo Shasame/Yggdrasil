@@ -1,6 +1,8 @@
 # Tailscale operator v1.82.0 — yggdrasil
 operatorConfig:
   hostname: yggdrasil-operator
+  advertiseRoutes:
+    - 192.168.1.0/24
 
 apiServerProxyConfig:
   mode: "true"
