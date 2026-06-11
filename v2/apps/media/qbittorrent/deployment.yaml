@@ -67,17 +67,26 @@ spec:
             - containerPort: 8000
               name: gluetun-api
           readinessProbe:
-            httpGet:
-              path: /v1/vpn/status
-              port: 8000
-            initialDelaySeconds: 10
+            exec:
+              # Gluetun ships this script specifically for container health checking.
+              # It checks the VPN tunnel state internally without requiring a network
+              # connection to the control server — immune to DNS override issues.
+              command:
+                - /gluetun-entrypoint
+                - healthcheck
+            initialDelaySeconds: 15
             periodSeconds: 10
+            failureThreshold: 6
+            timeoutSeconds: 5
           livenessProbe:
-            httpGet:
-              path: /v1/vpn/status
-              port: 8000
+            exec:
+              command:
+                - /gluetun-entrypoint
+                - healthcheck
             initialDelaySeconds: 30
             periodSeconds: 30
+            failureThreshold: 3
+            timeoutSeconds: 5
           resources:
             requests:
               cpu: 50m
