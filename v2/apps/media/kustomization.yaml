@@ -21,3 +21,6 @@ resources:
   - jellyfin/pvc.yaml
   - jellyfin/deployment.yaml
   - jellyfin/service.yaml
+  - seerr/pvc.yaml
+  - seerr/deployment.yaml
+  - seerr/service.yaml
