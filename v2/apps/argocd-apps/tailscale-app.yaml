@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tailscale
+  namespace: argocd
+  annotations:
+    # Core infrastructure — deploy early, after metallb (wave 1)
+    # but before anything that depends on remote access
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  sources:
+    - repoURL: https://pkgs.tailscale.com/helmcharts
+      chart: tailscale-operator
+      targetRevision: 1.82.0
+      helm:
+        valueFiles:
+          - $values/v2/infrastructure/tailscale/values.yaml
+    - repoURL: https://github.com/Shasame/Yggdrasil.git
+      targetRevision: HEAD
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tailscale
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
