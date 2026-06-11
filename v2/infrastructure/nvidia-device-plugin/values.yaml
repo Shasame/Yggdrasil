@@ -7,7 +7,7 @@ runtimeClass:
 # Node selector — only run on nodes with the GPU label.
 # We'll apply this label to ydl-gpu-node after deploy.
 nodeSelector:
-  feature.node.kubernetes.io/pci-10de.present: "true"
+  nvidia.com/gpu.present: "true"
 
 # Tolerations for the GPU taint we'll apply post-deploy.
 # Added now so the plugin itself can still schedule on a tainted node.
