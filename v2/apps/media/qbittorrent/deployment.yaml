@@ -27,8 +27,7 @@ spec:
         # Must be listed first — it owns the network namespace.
         # qBittorrent inherits its network stack.
         - name: gluetun
-          # Check current: https://github.com/qdm12/gluetun/releases
-          image: ghcr.io/qdm12/gluetun:v3.40.0
+          image: ghcr.io/qmcgaw/gluetun:3.41.1
           securityContext:
             capabilities:
               add:
@@ -54,7 +53,7 @@ spec:
               value: >
                 /bin/sh -c 'wget -O- -nv --retry-connrefused
                 --post-data "json={\"listen_port\":{{PORT}},\"current_network_interface\":\"{{VPN_INTERFACE}}\",\"random_port\":false,\"upnp\":false}"
-                http://127.0.0.1:8080/api/v2/app/setPreferences'
+                http://localhost:8080/api/v2/app/setPreferences'
             # DOWN_COMMAND: fires when VPN tunnel drops.
             # Resets qBittorrent to loopback only — belt and suspenders on top
             # of Gluetun's kill-switch. Prevents torrent traffic on real IP.
@@ -62,7 +61,7 @@ spec:
               value: >
                 /bin/sh -c 'wget -O- -nv --retry-connrefused
                 --post-data "json={\"listen_port\":0,\"current_network_interface\":\"lo\"}"
-                http://127.0.0.1:8080/api/v2/app/setPreferences'
+                http://localhost:8080/api/v2/app/setPreferences'
             - name: FIREWALL_OUTBOUND_SUBNETS
               # Allow traffic to cluster service CIDR so arr services can reach
               # qBittorrent's HTTP API without going through the VPN.
@@ -73,6 +72,14 @@ spec:
               value: ":8000"
             - name: HTTP_CONTROL_SERVER_LOG
               value: "off"
+            - name: WIREGUARD_MTU
+              value: "1320"
+            - name: DNS_SERVER
+              value: "on"
+            - name: DNS_UPSTREAM_TYPE
+              value: "dot"
+            - name: DNS_UPDATE_PERIOD
+              value: "0" 
             - name: WIREGUARD_PRIVATE_KEY
               valueFrom:
                 secretKeyRef:
