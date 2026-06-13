@@ -48,7 +48,7 @@ spec:
             # Requires: WebUI enabled on 8080 + localhost bypass auth ticked.
             # {{PORT}} and {{VPN_INTERFACE}} are substituted by Gluetun at runtime.
             - name: VPN_PORT_FORWARDING_UP_COMMAND
-              value: "/bin/sh -c 'wget -O- -nv --retry-connrefused --post-data \"json={\\\"listen_port\\\":{{PORT}},\\\"current_network_interface\\\":\\\"{{VPN_INTERFACE}}\\\",\\\"random_port\\\":false,\\\"upnp\\\":false}\" http://127.0.0.1:8080/api/v2/app/setPreferences'"
+              value: "/bin/sh -c 'wget -O- -nv --retry-connrefused --post-data \"json={\\\"listen_port\\\":{{PORTS}},\\\"current_network_interface\\\":\\\"{{VPN_INTERFACE}}\\\",\\\"random_port\\\":false,\\\"upnp\\\":false}\" http://127.0.0.1:8080/api/v2/app/setPreferences'"
             # DOWN_COMMAND: fires when VPN tunnel drops.
             # Resets qBittorrent to loopback only — belt and suspenders on top
             # of Gluetun's kill-switch. Prevents torrent traffic on real IP.
@@ -66,6 +66,8 @@ spec:
               value: "off"
             - name: WIREGUARD_MTU
               value: "1320"
+            - name: LOG_LEVEL
+              value: "debug"
             - name: WIREGUARD_PRIVATE_KEY
               valueFrom:
                 secretKeyRef:
@@ -111,6 +113,9 @@ spec:
               memory: 64Mi
             limits:
               memory: 256Mi
+          volumeMounts:
+            - name: tun
+              mountPath: /dev/net/tun
 
         # --- qBittorrent: download client ---
         # Shares network namespace with Gluetun — sees VPN interface only.
@@ -148,3 +153,6 @@ spec:
           hostPath:
             path: /var/mnt/media
             type: Directory
+        - name: tun
+          hostPath:
+            path: /dev/net/tun
