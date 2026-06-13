@@ -27,7 +27,7 @@ spec:
         # Must be listed first — it owns the network namespace.
         # qBittorrent inherits its network stack.
         - name: gluetun
-          image: ghcr.io/qdm12/gluetun:v3.40.0
+          image: ghcr.io/qdm12/gluetun:v3.41.1
           securityContext:
             capabilities:
               add:
