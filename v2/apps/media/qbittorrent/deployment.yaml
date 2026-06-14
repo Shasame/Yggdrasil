@@ -116,6 +116,8 @@ spec:
           volumeMounts:
             - name: tun
               mountPath: /dev/net/tun
+            - name: gluetun-data
+              mountPath: /tmp/gluetun
 
         # --- qBittorrent: download client ---
         # Shares network namespace with Gluetun — sees VPN interface only.
@@ -144,6 +146,103 @@ spec:
               memory: 256Mi
             limits:
               memory: 1Gi
+        # --- VPN watchdog: restarts Gluetun tunnel on crash or port-forward loss ---
+        # Shares network namespace with Gluetun — localhost API calls work directly.
+        # Only handles VPN reset logic — port updates are handled by UP/DOWN commands.
+        - name: vpn-watchdog
+          image: busybox:1.37.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              GLUETUN_API="http://localhost:8000"
+              # How long VPN must be unhealthy before forcing a restart
+              RESET_TIMEOUT=300
+              UNHEALTHY_SINCE_FILE="/tmp/vpn-unhealthy-since"
+              PORT_EMPTY_SINCE_FILE="/tmp/port-empty-since"
+              PORT_FILE="/tmp/gluetun/forwarded_port"
+              INTERVAL=30
+
+              echo "[watchdog] starting — checking every ${INTERVAL}s"
+
+              while true; do
+                # --- Check VPN status via Gluetun control API ---
+                VPN_STATUS=$(wget -qO- "${GLUETUN_API}/v1/vpn/status" 2>/dev/null \
+                  | grep -o '"status":"[^"]*"' \
+                  | cut -d'"' -f4)
+
+                if [ "$VPN_STATUS" != "running" ]; then
+                  # VPN not running — start or extend the unhealthy timer
+                  rm -f "$PORT_EMPTY_SINCE_FILE"
+                  if [ ! -f "$UNHEALTHY_SINCE_FILE" ]; then
+                    date +%s > "$UNHEALTHY_SINCE_FILE"
+                    echo "[watchdog] VPN status='${VPN_STATUS}', watching..."
+                  else
+                    ELAPSED=$(( $(date +%s) - $(cat "$UNHEALTHY_SINCE_FILE") ))
+                    echo "[watchdog] VPN unhealthy for ${ELAPSED}s (threshold: ${RESET_TIMEOUT}s)"
+                    if [ "$ELAPSED" -ge "$RESET_TIMEOUT" ]; then
+                      echo "[watchdog] threshold reached — restarting VPN via Gluetun API"
+                      wget -q -O- \
+                        --post-data='{"status":"stopped"}' \
+                        --header='Content-Type: application/json' \
+                        "${GLUETUN_API}/v1/vpn/status" > /dev/null || true
+                      sleep 5
+                      wget -q -O- \
+                        --post-data='{"status":"running"}' \
+                        --header='Content-Type: application/json' \
+                        "${GLUETUN_API}/v1/vpn/status" > /dev/null || true
+                      rm -f "$UNHEALTHY_SINCE_FILE"
+                      echo "[watchdog] VPN restart issued"
+                    fi
+                  fi
+
+                else
+                  # VPN is running — reset the unhealthy timer
+                  rm -f "$UNHEALTHY_SINCE_FILE"
+
+                  # --- Check port forwarding is active ---
+                  PORT=$(cat "$PORT_FILE" 2>/dev/null | tr -d '[:space:]')
+
+                  if [ -z "$PORT" ]; then
+                    # VPN up but no forwarded port yet — start or extend timer
+                    if [ ! -f "$PORT_EMPTY_SINCE_FILE" ]; then
+                      date +%s > "$PORT_EMPTY_SINCE_FILE"
+                      echo "[watchdog] port file empty, watching..."
+                    else
+                      ELAPSED=$(( $(date +%s) - $(cat "$PORT_EMPTY_SINCE_FILE") ))
+                      echo "[watchdog] port empty for ${ELAPSED}s (threshold: ${RESET_TIMEOUT}s)"
+                      if [ "$ELAPSED" -ge "$RESET_TIMEOUT" ]; then
+                        echo "[watchdog] no port for ${ELAPSED}s — restarting VPN"
+                        wget -q -O- \
+                          --post-data='{"status":"stopped"}' \
+                          --header='Content-Type: application/json' \
+                          "${GLUETUN_API}/v1/vpn/status" > /dev/null || true
+                        sleep 5
+                        wget -q -O- \
+                          --post-data='{"status":"running"}' \
+                          --header='Content-Type: application/json' \
+                          "${GLUETUN_API}/v1/vpn/status" > /dev/null || true
+                        rm -f "$PORT_EMPTY_SINCE_FILE"
+                        echo "[watchdog] VPN restart issued"
+                      fi
+                    fi
+                  else
+                    # Port is present — reset the empty timer
+                    rm -f "$PORT_EMPTY_SINCE_FILE"
+                  fi
+                fi
+
+                sleep "$INTERVAL"
+              done
+          volumeMounts:
+            - name: gluetun-data
+              mountPath: /tmp/gluetun
+          resources:
+            requests:
+              cpu: 5m
+              memory: 8Mi
+            limits:
+              memory: 16Mi
 
       volumes:
         - name: config
@@ -156,3 +255,5 @@ spec:
         - name: tun
           hostPath:
             path: /dev/net/tun
+        - name: gluetun-data
+          emptyDir: {}
