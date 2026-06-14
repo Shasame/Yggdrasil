@@ -24,3 +24,7 @@ resources:
   - seerr/pvc.yaml
   - seerr/deployment.yaml
   - seerr/service.yaml
+  - qui/init-job.yaml
+  - qui/pvc.yaml
+  - qui/deployment.yaml
+  - qui/service.yaml

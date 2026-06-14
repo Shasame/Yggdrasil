@@ -42,6 +42,8 @@ build/
 __pycache__/
 .pytest_cache/
 
+**/secret.yaml
+
 # Unencrypted secrets — never commit these
 talos/talsecret.yaml
 

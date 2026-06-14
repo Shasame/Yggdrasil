@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qui
+  namespace: media
+  labels:
+    app.kubernetes.io/name: qui
+    app.kubernetes.io/component: torrent-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: qui
+  strategy:
+    type: Recreate   # single replica + PVC — Recreate avoids ReadWriteOnce mount conflict
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: qui
+        app.kubernetes.io/component: torrent-ui
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: qui
+          image: ghcr.io/autobrr/qui:v1.19.0
+          ports:
+            - name: http
+              containerPort: 7476
+              protocol: TCP
+          env:
+            # ── Authentication ──
+            - name: QUI__AUTH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: qui-credentials
+                  key: username
+            - name: QUI__AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: qui-credentials
+                  key: password
+            # LAN CIDR + loopback (loopback required for health probes to work)
+            - name: QUI__AUTH_DISABLED_ALLOWED_CIDRS
+              value: "192.168.1.0/24,127.0.0.1/32"
+            # ── Core config ──
+            # Containers auto-detect and default to 0.0.0.0; explicit for clarity
+            - name: QUI__HOST
+              value: "0.0.0.0"
+            - name: QUI__PORT
+              value: "7476"
+            - name: TZ
+              value: "Europe/Paris"
+            - name: QUI__LOG_LEVEL
+              value: "INFO"
+            # ── Metrics (enable now — you have Prometheus on the roadmap) ──
+            - name: QUI__METRICS_ENABLED
+              value: "true"
+            # Metrics bind to 0.0.0.0 so Prometheus can scrape it in-cluster
+            - name: QUI__METRICS_HOST
+              value: "0.0.0.0"
+            - name: QUI__METRICS_PORT
+              value: "9074"
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            # Must match the path qBittorrent sees for its downloads.
+            # Your qBit container mounts /var/mnt/media at /media — so qui must too.
+            - name: media
+              mountPath: /media
+          livenessProbe:
+            httpGet:
+              path: /healthz/liveness
+              port: 7476
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz/readiness
+              port: 7476
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"  # qui is lean: ~50-100MB base + ~1MB per 1000 torrents
+              cpu: "500m"
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: qui-config
+        - name: media
+          hostPath:
+            path: /var/mnt/media
+            type: Directory

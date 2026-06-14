@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: qui
+  namespace: media
+  labels:
+    app.kubernetes.io/name: qui
+    app.kubernetes.io/component: torrent-ui
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: qui
+  ports:
+    - name: http
+      port: 7476
+      targetPort: http
+      protocol: TCP
+    - name: metrics
+      port: 9074
+      targetPort: 9074
+      protocol: TCP
