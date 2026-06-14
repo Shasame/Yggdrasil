@@ -12,9 +12,6 @@ resources:
   - radarr/pvc.yaml
   - radarr/deployment.yaml
   - radarr/service.yaml
-  - bazarr/pvc.yaml
-  - bazarr/deployment.yaml
-  - bazarr/service.yaml
   - qbittorrent/pvc.yaml
   - qbittorrent/deployment.yaml
   - qbittorrent/service.yaml
@@ -28,3 +25,6 @@ resources:
   - qui/pvc.yaml
   - qui/deployment.yaml
   - qui/service.yaml
+  # - bazarr/pvc.yaml
+  # - bazarr/deployment.yaml
+  # - bazarr/service.yaml
