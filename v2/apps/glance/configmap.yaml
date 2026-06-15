@@ -1,0 +1,260 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: glance-config
+  namespace: glance
+data:
+  glance.yml: |
+    server:
+      port: 8080
+
+    theme:
+      # Dark theme — feels natural for an operator dashboard.
+      # Options: dark (default), light, or define custom HSL values.
+      background-color: 240 8 9
+      primary-color: 217 92 76
+
+    pages:
+      - name: Home
+        columns:
+
+          # ── LEFT COLUMN (small) ─────────────────────────────────────────
+          - size: small
+            widgets:
+
+              # Weather — Open-Meteo, no API key required.
+              # Coordinates: Colombes, Île-de-France.
+              - type: weather
+                location: Colombes, France
+                units: metric        # celsius
+                hour-format: 24h
+                show-area-name: true
+
+              # Node health — high-level CPU / RAM / disk snapshot.
+              # This reads from /proc on the host via the Glance pod.
+              # No agent needed; Glance polls itself.
+              - type: server-stats
+                title: Node Health
+                # hide-mountpoints hides irrelevant overlay/tmpfs mounts —
+                # keeps the widget clean on a Talos node.
+                hide-mountpoints-by-default: true
+                mountpoints:
+                  - /            # rootfs (NVMe, overlayfs on Talos)
+                  - /var/mnt/media          # media hostPath mount
+                  - /var/mnt/local-path-provisioner  # PVC storage
+
+              # ArgoCD — simple HTTP reachability check.
+              # Tells you if the UI is up, not individual app sync status.
+              # For sync-level visibility, open the ArgoCD UI directly.
+              - type: monitor
+                title: ArgoCD
+                cache: 1m
+                sites:
+                  - title: ArgoCD
+                    url: https://argocd.home.shasame.fr
+                    icon: si:argo
+
+          # ── CENTER COLUMN (full) ────────────────────────────────────────
+          - size: full
+            widgets:
+
+              # qBittorrent — native torrent widget.
+              # Shows: active torrents list, per-torrent progress & ratio,
+              # global download/upload speeds, torrent state.
+              #
+              # Prerequisites before first sync:
+              #   1. Set QBITTORRENT_URL in the glance-secrets Secret.
+              #   2. In qBittorrent → Tools → Options → Web UI → Auth:
+              #      enable "Bypass auth for whitelisted IPs" → add 10.244.0.0/16
+              - type: custom-api
+                title: Downloads
+                cache: 10s
+                url: ${QBITTORRENT_URL}/api/v2/torrents/info
+                parameters:
+                  filter: active
+                template: |
+                  {{ $torrents := .JSON.Array "" }}
+                  {{ $dlSpeed := 0 }}
+                  {{ $ulSpeed := 0 }}
+                  {{ range $torrents }}
+                    {{ $dlSpeed = add $dlSpeed (.Int "dlspeed") }}
+                    {{ $ulSpeed = add $ulSpeed (.Int "upspeed") }}
+                  {{ end }}
+                  <p class="size-h5 color-subdue">
+                    ↓ {{ div $dlSpeed 1048576 | toFloat | printf "%.1f" }} MB/s
+                    &nbsp;↑ {{ div $ulSpeed 1048576 | toFloat | printf "%.1f" }} MB/s
+                    &nbsp;· {{ len $torrents }} active
+                  </p>
+                  <ul class="list list-gap-10 collapsible-container" data-collapse-after="5">
+                  {{ range $torrents }}
+                    <li>
+                      <span class="size-h4">{{ .String "name" }}</span>
+                      <p class="size-h6 color-subdue">
+                        {{ .Float "progress" | mul 100 | printf "%.0f" }}%
+                        · ratio {{ .Float "ratio" | printf "%.2f" }}
+                        · {{ .String "state" }}
+                      </p>
+                    </li>
+                  {{ end }}
+                  </ul>
+
+              # TMDB upcoming movies — custom-api widget using the
+              # /discover/movie endpoint filtered to upcoming releases.
+              # Auth: Bearer token (Read Access Token, NOT the short API key).
+              # See secret.yaml for how to get TMDB_API_KEY.
+              - type: custom-api
+                title: Upcoming Movies
+                cache: 6h
+                url: https://api.themoviedb.org/3/discover/movie
+                parameters:
+                  # Sorted by popularity so the most anticipated land first.
+                  sort_by: popularity.desc
+                  # Only movies releasing from today onward.
+                  # Glance's now function gives today's date in YYYY-MM-DD.
+                  "primary_release_date.gte": "{{ now | date \"2006-01-02\" }}"
+                  # Look ahead 90 days.
+                  "primary_release_date.lte": "{{ now.AddDate 0 0 90 | date \"2006-01-02\" }}"
+                  language: fr-FR   # French locale — change to en-US if preferred
+                  page: "1"
+                headers:
+                  Authorization: Bearer ${TMDB_API_KEY}
+                  Content-Type: application/json
+                template: |
+                  {{ $movies := .JSON.Array "results" }}
+                  {{ if eq (len $movies) 0 }}
+                    <p class="color-subdue">No upcoming movies found.</p>
+                  {{ else }}
+                  <ul class="list list-gap-10 collapsible-container" data-collapse-after="5">
+                    {{ range $movies }}
+                    <li>
+                      <a class="size-h4" href="https://www.themoviedb.org/movie/{{ .Int "id" }}" target="_blank">
+                        {{ .String "title" }}
+                      </a>
+                      <p class="size-h6 color-subdue">
+                        {{ .String "release_date" }}
+                        {{ if .String "overview" }}
+                          · {{ .String "overview"}}
+                        {{ end }}
+                      </p>
+                    </li>
+                    {{ end }}
+                  </ul>
+                  {{ end }}
+
+              # TMDB upcoming TV shows — same pattern as movies.
+              - type: custom-api
+                title: Upcoming TV Shows
+                cache: 6h
+                url: https://api.themoviedb.org/3/discover/tv
+                parameters:
+                  sort_by: popularity.desc
+                  "first_air_date.gte": "{{ now | date \"2006-01-02\" }}"
+                  "first_air_date.lte": "{{ now.AddDate 0 0 90 | date \"2006-01-02\" }}"
+                  language: fr-FR
+                  page: "1"
+                headers:
+                  Authorization: Bearer ${TMDB_API_KEY}
+                  Content-Type: application/json
+                template: |
+                  {{ $shows := .JSON.Array "results" }}
+                  {{ if eq (len $shows) 0 }}
+                    <p class="color-subdue">No upcoming shows found.</p>
+                  {{ else }}
+                  <ul class="list list-gap-10 collapsible-container" data-collapse-after="5">
+                    {{ range $shows }}
+                    <li>
+                      <a class="size-h4" href="https://www.themoviedb.org/tv/{{ .Int "id" }}" target="_blank">
+                        {{ .String "name" }}
+                      </a>
+                      <p class="size-h6 color-subdue">
+                        {{ .String "first_air_date" }}
+                        {{ if .String "overview" }}
+                          · {{ .String "overview"}}
+                        {{ end }}
+                      </p>
+                    </li>
+                    {{ end }}
+                  </ul>
+                  {{ end }}
+
+          # ── RIGHT COLUMN (small) ────────────────────────────────────────
+          - size: small
+            widgets:
+
+              # Service shortcuts — quick links to every running service.
+              # monitor type does HTTP health checks AND shows as bookmarks.
+              - type: monitor
+                title: Services
+                cache: 1m
+                sites:
+                  - title: Jellyfin
+                    url: https://jellyfin.home.shasame.fr
+                    icon: si:jellyfin
+                  - title: Jellyseerr
+                    url: https://jellyseerr.home.shasame.fr
+                    icon: si:jellyseerr
+                  - title: Sonarr
+                    url: https://sonarr.home.shasame.fr
+                    icon: si:sonarr
+                  - title: Radarr
+                    url: https://radarr.home.shasame.fr
+                    icon: si:radarr
+                  - title: Prowlarr
+                    url: https://prowlarr.home.shasame.fr
+                    icon: si:prowlarr
+                  - title: Bazarr
+                    url: https://bazarr.home.shasame.fr
+                    icon: si:bazarr
+                  - title: qBittorrent
+                    url: https://qbittorrent.home.shasame.fr
+                    icon: si:qbittorrent
+                  - title: Traefik
+                    url: https://traefik.home.shasame.fr
+                    icon: si:traefikproxy
+
+              # Sonarr queue/stats — shows monitored series count and queue.
+              # SONARR_API_KEY injected via environment variable.
+              - type: custom-api
+                title: Sonarr
+                cache: 5m
+                url: http://sonarr.media.svc.cluster.local:8989/api/v3/queue/status
+                headers:
+                  X-Api-Key: ${SONARR_API_KEY}
+                template: |
+                  <ul class="list">
+                    <li>
+                      <span class="color-subdue">Total in queue</span>
+                      <span class="size-h4">{{ .JSON.Int "totalCount" }}</span>
+                    </li>
+                    <li>
+                      <span class="color-subdue">Errors</span>
+                      <span class="size-h4">{{ .JSON.Int "errors" }}</span>
+                    </li>
+                    <li>
+                      <span class="color-subdue">Warnings</span>
+                      <span class="size-h4">{{ .JSON.Int "warnings" }}</span>
+                    </li>
+                  </ul>
+
+              # Radarr queue/stats — same pattern as Sonarr.
+              - type: custom-api
+                title: Radarr
+                cache: 5m
+                url: http://radarr.media.svc.cluster.local:7878/api/v3/queue/status
+                headers:
+                  X-Api-Key: ${RADARR_API_KEY}
+                template: |
+                  <ul class="list">
+                    <li>
+                      <span class="color-subdue">Total in queue</span>
+                      <span class="size-h4">{{ .JSON.Int "totalCount" }}</span>
+                    </li>
+                    <li>
+                      <span class="color-subdue">Errors</span>
+                      <span class="size-h4">{{ .JSON.Int "errors" }}</span>
+                    </li>
+                    <li>
+                      <span class="color-subdue">Warnings</span>
+                      <span class="size-h4">{{ .JSON.Int "warnings" }}</span>
+                    </li>
+                  </ul>

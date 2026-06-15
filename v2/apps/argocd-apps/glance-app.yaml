@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: glance
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: homelab
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Shasame/Yggdrasil.git
+    targetRevision: HEAD
+    # Raw directory — no Helm chart. Glance has no official Helm chart.
+    # ArgoCD will use the kustomization.yaml in this directory.
+    path: v2/apps/glance
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: glance
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false  # namespace.yaml handles this explicitly
+      - ServerSideApply=false  # no Traefik SSA issues; raw manifests are safe

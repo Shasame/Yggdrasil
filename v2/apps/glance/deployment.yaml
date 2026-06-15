@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: glance
+  namespace: glance
+  labels:
+    app.kubernetes.io/name: glance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: glance
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: glance
+    spec:
+      # Glance reads /proc/stat, /proc/meminfo, etc. for server-stats widget.
+      # It needs to read the HOST's /proc — not the container's — so we mount it.
+      # This is a deliberate, documented Glance requirement for server-stats.
+      # It does NOT require privileged mode or root.
+      volumes:
+        - name: config
+          configMap:
+            name: glance-config
+        - name: host-proc
+          hostPath:
+            path: /proc
+        - name: host-sys
+          hostPath:
+            path: /sys
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
+
+      containers:
+        - name: glance
+          # Pin to a specific tag — never use 'latest'.
+          # Check https://github.com/glanceapp/glance/releases for updates.
+          image: glanceapp/glance:v0.8.5
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          # All sensitive values come from the glance-secrets Secret.
+          # The glance.yml config references these as ${VAR_NAME}.
+          # Glance natively supports environment variable interpolation.
+          envFrom:
+            - secretRef:
+                name: glance-secrets
+
+          volumeMounts:
+            - name: config
+              mountPath: /app/config/glance.yml
+              subPath: glance.yml
+              readOnly: true
+            - name: host-proc
+              mountPath: /proc
+              readOnly: true
+            - name: host-sys
+              mountPath: /sys
+              readOnly: true
+            - name: localtime
+              mountPath: /etc/localtime
+              readOnly: true
+
+          # Glance is a lightweight Go binary — these limits are generous.
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+      securityContext:
+        # Run as non-root. Glance doesn't need root for /proc reads.
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
