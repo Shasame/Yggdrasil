@@ -5,7 +5,8 @@ metadata:
   namespace: cloudflare-tunnel
 data:
   config.yaml: |
-  
+    tunnel: efc3041d-8b57-40e2-b5f4-81c83b52f0f1
+    credentials-file: /etc/cloudflared/credentials.json
     ingress:
       - hostname: jellyfin.shasame.fr
         service: http://traefik.traefik.svc.cluster.local:80
