@@ -69,6 +69,15 @@ ports:
           - main: "home.shasame.fr"
             sans:
               - "*.home.shasame.fr"
+  tunnel-web:
+    port: 8001
+    expose:
+      default: true
+    exposedPort: 8080
+    protocol: TCP
+    http:
+      tls:
+        enabled: false  # No TLS termination — Cloudflare handles TLS for this entry point
 
 # ============================================================
 # Service (MetalLB integration)

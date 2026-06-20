@@ -6,7 +6,7 @@ metadata:
   namespace: media
 spec:
   entryPoints:
-    - web
+    - tunnel-web
   routes:
     - match: Host(`jellyfin.shasame.fr`)
       kind: Rule
@@ -22,7 +22,7 @@ metadata:
   namespace: media
 spec:
   entryPoints:
-    - web
+    - tunnel-web
   routes:
     - match: Host(`seerr.shasame.fr`)
       kind: Rule

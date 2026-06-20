@@ -9,9 +9,9 @@ data:
     credentials-file: /etc/cloudflared/credentials.json
     ingress:
       - hostname: jellyfin.shasame.fr
-        service: http://traefik.traefik.svc.cluster.local:80
+        service: http://traefik.traefik.svc.cluster.local:8080
 
       - hostname: seerr.shasame.fr
-        service: http://traefik.traefik.svc.cluster.local:80
+        service: http://traefik.traefik.svc.cluster.local:8080
 
       - service: http_status:404
