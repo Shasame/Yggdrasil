@@ -84,6 +84,16 @@ spec:
                 secretKeyRef:
                   name: gluetun-vpn-credentials
                   key: WIREGUARD_ADDRESSES
+            # Control server authentication — required since v3.40.
+            # GLUETUN_API_KEY must be defined before this var so Kubernetes
+            # can substitute $(GLUETUN_API_KEY) at pod creation time.
+            - name: GLUETUN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gluetun-control-api-key
+                  key: GLUETUN_API_KEY
+            - name: HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE
+              value: '{"auth":"apikey","apikey":"$(GLUETUN_API_KEY)"}'
           ports:
             # Gluetun exposes qBittorrent's port — shared netns means Service
             # traffic hits Gluetun's network stack, which forwards to qBittorrent.
@@ -157,6 +167,12 @@ spec:
         # Only handles VPN reset logic — port updates are handled by UP/DOWN commands.
         - name: vpn-watchdog
           image: busybox:1.37.0
+          env:
+            - name: GLUETUN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gluetun-control-api-key
+                  key: GLUETUN_API_KEY
           command:
             - /bin/sh
             - -c
@@ -173,7 +189,7 @@ spec:
 
               while true; do
                 # --- Check VPN status via Gluetun control API ---
-                VPN_STATUS=$(wget -qO- "${GLUETUN_API}/v1/vpn/status" 2>/dev/null \
+                VPN_STATUS=$(wget -qO- --header "X-API-Key: ${GLUETUN_API_KEY}" "${GLUETUN_API}/v1/vpn/status" 2>/dev/null \
                   | grep -o '"status":"[^"]*"' \
                   | cut -d'"' -f4)
 
@@ -191,11 +207,13 @@ spec:
                       wget -q -O- \
                         --post-data='{"status":"stopped"}' \
                         --header='Content-Type: application/json' \
+                        --header "X-API-Key: ${GLUETUN_API_KEY}" \
                         "${GLUETUN_API}/v1/vpn/status" > /dev/null || true
                       sleep 5
                       wget -q -O- \
                         --post-data='{"status":"running"}' \
                         --header='Content-Type: application/json' \
+                        --header "X-API-Key: ${GLUETUN_API_KEY}" \
                         "${GLUETUN_API}/v1/vpn/status" > /dev/null || true
                       rm -f "$UNHEALTHY_SINCE_FILE"
                       echo "[watchdog] VPN restart issued"
@@ -222,11 +240,13 @@ spec:
                         wget -q -O- \
                           --post-data='{"status":"stopped"}' \
                           --header='Content-Type: application/json' \
+                          --header "X-API-Key: ${GLUETUN_API_KEY}" \
                           "${GLUETUN_API}/v1/vpn/status" > /dev/null || true
                         sleep 5
                         wget -q -O- \
                           --post-data='{"status":"running"}' \
                           --header='Content-Type: application/json' \
+                          --header "X-API-Key: ${GLUETUN_API_KEY}" \
                           "${GLUETUN_API}/v1/vpn/status" > /dev/null || true
                         rm -f "$PORT_EMPTY_SINCE_FILE"
                         echo "[watchdog] VPN restart issued"
