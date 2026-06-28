@@ -45,19 +45,18 @@ spec:
               value: "Switzerland"
             - name: VPN_PORT_FORWARDING
               value: "on"
-            # - name: PORT_FORWARD_ONLY
-            #   value: "on"
-            # UP_COMMAND: fires when forwarded port is assigned or renewed.
+              # UP_COMMAND: fires when forwarded port is assigned or renewed.
             # Updates qBittorrent listening port via its API.
             # Requires: WebUI enabled on 8080 + localhost bypass auth ticked.
             # {{PORT}} and {{VPN_INTERFACE}} are substituted by Gluetun at runtime.
             - name: VPN_PORT_FORWARDING_UP_COMMAND
-              value: "/bin/sh -c 'wget -O- -nv --retry-connrefused --post-data \"json={\\\"listen_port\\\":{{PORTS}},\\\"current_network_interface\\\":\\\"{{VPN_INTERFACE}}\\\",\\\"random_port\\\":false,\\\"upnp\\\":false}\" http://127.0.0.1:8080/api/v2/app/setPreferences'"
+              value: "/bin/sh -c 'wget -O- -nv --retry-connrefused --post-data \"json={\\\"listen_port\\\":{{PORT}},\\\"current_network_interface\\\":\\\"{{VPN_INTERFACE}}\\\",\\\"random_port\\\":false,\\\"upnp\\\":false}\" http://127.0.0.1:8080/api/v2/app/setPreferences'"
             # DOWN_COMMAND: fires when VPN tunnel drops.
             # Resets qBittorrent to loopback only — belt and suspenders on top
             # of Gluetun's kill-switch. Prevents torrent traffic on real IP.
             - name: VPN_PORT_FORWARDING_DOWN_COMMAND
               value: "/bin/sh -c 'wget -O- -nv --retry-connrefused --post-data \"json={\\\"listen_port\\\":0,\\\"current_network_interface\\\":\\\"lo\\\"}\" http://127.0.0.1:8080/api/v2/app/setPreferences'"
+
             - name: FIREWALL_OUTBOUND_SUBNETS
               # Allow traffic to cluster service CIDR so arr services can reach
               # qBittorrent's HTTP API without going through the VPN.
@@ -166,7 +165,7 @@ spec:
         # Shares network namespace with Gluetun — localhost API calls work directly.
         # Only handles VPN reset logic — port updates are handled by UP/DOWN commands.
         - name: vpn-watchdog
-          image: busybox:1.37.0
+          image: curlimages/curl:8.11.0
           env:
             - name: GLUETUN_API_KEY
               valueFrom:
@@ -189,7 +188,7 @@ spec:
 
               while true; do
                 # --- Check VPN status via Gluetun control API ---
-                VPN_STATUS=$(wget -qO- --header "X-API-Key: ${GLUETUN_API_KEY}" "${GLUETUN_API}/v1/vpn/status" 2>/dev/null \
+                VPN_STATUS=$(curl -sf -H "X-API-Key: ${GLUETUN_API_KEY}" "${GLUETUN_API}/v1/vpn/status" 2>/dev/null \
                   | grep -o '"status":"[^"]*"' \
                   | cut -d'"' -f4)
 
@@ -204,16 +203,16 @@ spec:
                     echo "[watchdog] VPN unhealthy for ${ELAPSED}s (threshold: ${RESET_TIMEOUT}s)"
                     if [ "$ELAPSED" -ge "$RESET_TIMEOUT" ]; then
                       echo "[watchdog] threshold reached — restarting VPN via Gluetun API"
-                      wget -q -O- \
-                        --post-data='{"status":"stopped"}' \
-                        --header='Content-Type: application/json' \
-                        --header "X-API-Key: ${GLUETUN_API_KEY}" \
+                      curl -sf -X PUT \
+                        -H 'Content-Type: application/json' \
+                        -H "X-API-Key: ${GLUETUN_API_KEY}" \
+                        -d '{"status":"stopped"}' \
                         "${GLUETUN_API}/v1/vpn/status" > /dev/null || true
                       sleep 5
-                      wget -q -O- \
-                        --post-data='{"status":"running"}' \
-                        --header='Content-Type: application/json' \
-                        --header "X-API-Key: ${GLUETUN_API_KEY}" \
+                      curl -sf -X PUT \
+                        -H 'Content-Type: application/json' \
+                        -H "X-API-Key: ${GLUETUN_API_KEY}" \
+                        -d '{"status":"running"}' \
                         "${GLUETUN_API}/v1/vpn/status" > /dev/null || true
                       rm -f "$UNHEALTHY_SINCE_FILE"
                       echo "[watchdog] VPN restart issued"
@@ -237,16 +236,16 @@ spec:
                       echo "[watchdog] port empty for ${ELAPSED}s (threshold: ${RESET_TIMEOUT}s)"
                       if [ "$ELAPSED" -ge "$RESET_TIMEOUT" ]; then
                         echo "[watchdog] no port for ${ELAPSED}s — restarting VPN"
-                        wget -q -O- \
-                          --post-data='{"status":"stopped"}' \
-                          --header='Content-Type: application/json' \
-                          --header "X-API-Key: ${GLUETUN_API_KEY}" \
+                        curl -sf -X PUT \
+                          -H 'Content-Type: application/json' \
+                          -H "X-API-Key: ${GLUETUN_API_KEY}" \
+                          -d '{"status":"stopped"}' \
                           "${GLUETUN_API}/v1/vpn/status" > /dev/null || true
                         sleep 5
-                        wget -q -O- \
-                          --post-data='{"status":"running"}' \
-                          --header='Content-Type: application/json' \
-                          --header "X-API-Key: ${GLUETUN_API_KEY}" \
+                        curl -sf -X PUT \
+                          -H 'Content-Type: application/json' \
+                          -H "X-API-Key: ${GLUETUN_API_KEY}" \
+                          -d '{"status":"running"}' \
                           "${GLUETUN_API}/v1/vpn/status" > /dev/null || true
                         rm -f "$PORT_EMPTY_SINCE_FILE"
                         echo "[watchdog] VPN restart issued"
