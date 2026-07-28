@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tailscale-connector
+  namespace: argocd
+  annotations:
+    # Must come after the tailscale-operator app (wave 2) — the Connector
+    # CRD is installed by that chart (installCRDs: true).
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Shasame/Yggdrasil.git
+    targetRevision: HEAD
+    path: v2/infrastructure/tailscale
+    directory:
+      include: "connector.yaml"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tailscale
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

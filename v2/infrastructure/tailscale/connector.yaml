@@ -1,0 +1,19 @@
+# Subnet router Connector — this is what actually advertises 192.168.1.0/24
+# to the tailnet. The tailscale-operator Helm chart's `operatorConfig` has
+# NO `advertiseRoutes` field (that was a mistake in values.yaml) — subnet
+# routing must be requested via this separate CRD, which the operator
+# reconciles into its own proxy Pod/StatefulSet.
+#
+# After this is applied and synced:
+#   kubectl get connector yggdrasil-lan   # STATUS should become "Connected"
+# then approve the route in https://login.tailscale.com/admin/machines
+# (unless you configure an auto-approver for tag:k8s in your tailnet ACLs).
+apiVersion: tailscale.com/v1alpha1
+kind: Connector
+metadata:
+  name: yggdrasil-lan
+spec:
+  hostname: yggdrasil-lan-router
+  subnetRouter:
+    advertiseRoutes:
+      - "192.168.1.0/24"
