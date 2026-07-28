@@ -4,16 +4,26 @@
 # routing must be requested via this separate CRD, which the operator
 # reconciles into its own proxy Pod/StatefulSet.
 #
+# tags: the chart's default proxy tag is `tag:k8s`, but our OAuth
+# client / tailnet ACL was only ever authorized for `tag:k8s-operator`
+# (the operator's own tag). Without this override, Connector creation
+# fails with "requested tags [tag:k8s] are invalid or not permitted".
+# Reusing tag:k8s-operator here is a pragmatic workaround; the "correct"
+# long-term fix is to add tag:k8s to tagOwners + the OAuth client's
+# scopes in the Tailscale admin console, then remove this override.
+#
 # After this is applied and synced:
 #   kubectl get connector yggdrasil-lan   # STATUS should become "Connected"
 # then approve the route in https://login.tailscale.com/admin/machines
-# (unless you configure an auto-approver for tag:k8s in your tailnet ACLs).
 apiVersion: tailscale.com/v1alpha1
 kind: Connector
 metadata:
   name: yggdrasil-lan
 spec:
   hostname: yggdrasil-lan-router
+  tags:
+    - "tag:k8s-operator"
   subnetRouter:
     advertiseRoutes:
       - "192.168.1.0/24"
+
