@@ -15,6 +15,13 @@
 # After this is applied and synced:
 #   kubectl get connector yggdrasil-lan   # STATUS should become "Connected"
 # then approve the route in https://login.tailscale.com/admin/machines
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tailscale
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+---
 apiVersion: tailscale.com/v1alpha1
 kind: Connector
 metadata:
