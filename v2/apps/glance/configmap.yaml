@@ -18,9 +18,13 @@ data:
       - name: Home
         columns:
 
-          # ── LEFT COLUMN (small) ─────────────────────────────────────────
+          # ── LEFT COLUMN (small) — daily/personal at-a-glance ────────────
           - size: small
             widgets:
+
+              # Calendar — plain month view, no API key required.
+              - type: calendar
+                first-day-of-week: monday
 
               # Weather — Open-Meteo, no API key required.
               # Coordinates: Colombes, Île-de-France.
@@ -30,31 +34,39 @@ data:
                 hour-format: 24h
                 show-area-name: true
 
-              # Node health — high-level CPU / RAM / disk snapshot.
-              # This reads from /proc on the host via the Glance pod.
-              # No agent needed; Glance polls itself.
-              - type: server-stats
-                title: Node Health
-                # hide-mountpoints hides irrelevant overlay/tmpfs mounts —
-                # keeps the widget clean on a Talos node.
-                hide-mountpoints-by-default: true
-                mountpoints:
-                  - /            # rootfs (NVMe, overlayfs on Talos)
-                  - /var/mnt/media          # media hostPath mount
-                  - /var/mnt/local-path-provisioner  # PVC storage
+              # Seerr pending requests — count-only, not a per-title list.
+              # The Overseerr/Jellyseerr API doesn't embed movie/show titles
+              # on the request list endpoint (only tmdbId), so a reliable
+              # per-item title would require an extra API call per request,
+              # which Glance's custom-api widget can't do dynamically.
+              # /request/count gives an accurate, low-maintenance summary.
+              #
+              # Prerequisite: SEERR_API_KEY in the glance-secrets Secret.
+              # Get it from Seerr → Settings → General → API Key.
+              - type: custom-api
+                title: Seerr Requests
+                title-url: https://seerr.home.shasame.fr/requests?filter=pending
+                cache: 5m
+                url: http://seerr.media.svc.cluster.local:5055/api/v1/request/count
+                headers:
+                  X-Api-Key: ${SEERR_API_KEY}
+                template: |
+                  <ul class="list">
+                    <li>
+                      <span class="color-subdue">Pending</span>
+                      <span class="size-h4">{{ .JSON.Int "pending" }}</span>
+                    </li>
+                    <li>
+                      <span class="color-subdue">Movies</span>
+                      <span class="size-h4">{{ .JSON.Int "movie" }}</span>
+                    </li>
+                    <li>
+                      <span class="color-subdue">TV Shows</span>
+                      <span class="size-h4">{{ .JSON.Int "tv" }}</span>
+                    </li>
+                  </ul>
 
-              # ArgoCD — simple HTTP reachability check.
-              # Tells you if the UI is up, not individual app sync status.
-              # For sync-level visibility, open the ArgoCD UI directly.
-              - type: monitor
-                title: ArgoCD
-                cache: 1m
-                sites:
-                  - title: ArgoCD
-                    url: https://argocd.home.shasame.fr
-                    icon: si:argo
-
-          # ── CENTER COLUMN (full) ────────────────────────────────────────
+          # ── CENTER COLUMN (full) — main interests ───────────────────────
           - size: full
             widgets:
 
@@ -97,6 +109,79 @@ data:
                     </li>
                   {{ end }}
                   </ul>
+
+              # Recently added on Jellyfin — newest movies and episodes added
+              # to your library (episodes rather than whole series, so new
+              # additions to shows you already have surface here too).
+              # Requires a Jellyfin API key: Dashboard → Advanced →
+              # API Keys, stored as JELLYFIN_API_KEY.
+              - type: custom-api
+                title: Recently Added on Jellyfin
+                cache: 30m
+                url: http://jellyfin.media.svc.cluster.local:8096/Items
+                parameters:
+                  SortBy: DateCreated
+                  SortOrder: Descending
+                  IncludeItemTypes: Movie,Episode
+                  Recursive: "true"
+                  Fields: SeriesName,ProductionYear
+                  Limit: "8"
+                headers:
+                  X-Emby-Token: ${JELLYFIN_API_KEY}
+                template: |
+                  {{ $items := .JSON.Array "Items" }}
+                  {{ if eq (len $items) 0 }}
+                    <p class="color-subdue">Nothing added recently.</p>
+                  {{ else }}
+                  <ul class="list list-gap-10 collapsible-container" data-collapse-after="5">
+                    {{ range $items }}
+                    {{ $isEpisode := eq (.String "Type") "Episode" }}
+                    <li>
+                      <a class="size-h4" href="https://jellyfin.home.shasame.fr/web/index.html#!/details?id={{ .String "Id" }}" target="_blank">
+                        {{ if $isEpisode }}{{ .String "SeriesName" }} — {{ .String "Name" }}{{ else }}{{ .String "Name" }}{{ end }}
+                      </a>
+                      <p class="size-h6 color-subdue">
+                        {{ if $isEpisode }}Episode{{ else }}Movie{{ end }}
+                        {{ if .Exists "ProductionYear" }}
+                          · {{ .Int "ProductionYear" }}
+                        {{ end }}
+                      </p>
+                    </li>
+                    {{ end }}
+                  </ul>
+                  {{ end }}
+
+              # TMDB trending today — what's popular right now, across both
+              # movies and TV. Complements the "upcoming" lists below.
+              - type: custom-api
+                title: Trending Now
+                cache: 6h
+                url: https://api.themoviedb.org/3/trending/all/day
+                parameters:
+                  language: fr-FR
+                headers:
+                  Authorization: Bearer ${TMDB_API_KEY}
+                  Content-Type: application/json
+                template: |
+                  {{ $items := .JSON.Array "results" }}
+                  {{ if eq (len $items) 0 }}
+                    <p class="color-subdue">No trending titles found.</p>
+                  {{ else }}
+                  <ul class="list list-gap-10 collapsible-container" data-collapse-after="5">
+                    {{ range $items }}
+                    {{ $isMovie := eq (.String "media_type") "movie" }}
+                    <li>
+                      <a class="size-h4" href="https://www.themoviedb.org/{{ .String "media_type" }}/{{ .Int "id" }}" target="_blank">
+                        {{ if $isMovie }}{{ .String "title" }}{{ else }}{{ .String "name" }}{{ end }}
+                      </a>
+                      <p class="size-h6 color-subdue">
+                        {{ if $isMovie }}Movie{{ else }}TV Show{{ end }}
+                        · {{ if $isMovie }}{{ .String "release_date" }}{{ else }}{{ .String "first_air_date" }}{{ end }}
+                      </p>
+                    </li>
+                    {{ end }}
+                  </ul>
+                  {{ end }}
 
               # TMDB upcoming movies — custom-api widget using the
               # /discover/movie endpoint filtered to upcoming releases.
@@ -177,21 +262,52 @@ data:
                   </ul>
                   {{ end }}
 
-          # ── RIGHT COLUMN (small) ────────────────────────────────────────
+              # Hacker News — general tech interest filler for the big column.
+              - type: hacker-news
+                limit: 10
+                collapse-after: 5
+
+          # ── RIGHT COLUMN (small) — node health + tool health checks ─────
           - size: small
             widgets:
 
-              # Service shortcuts — quick links to every running service.
-              # monitor type does HTTP health checks AND shows as bookmarks.
+              # Node health — high-level CPU / RAM / disk snapshot.
+              # This reads from /proc on the host via the Glance pod.
+              # No agent needed; Glance polls itself.
+              - type: server-stats
+                title: Node Health
+                # hide-mountpoints hides irrelevant overlay/tmpfs mounts —
+                # keeps the widget clean on a Talos node.
+                hide-mountpoints-by-default: true
+                mountpoints:
+                  - /            # rootfs (NVMe, overlayfs on Talos)
+                  - /var/mnt/media          # media hostPath mount
+                  - /var/mnt/local-path-provisioner  # PVC storage
+
+              # Infrastructure health checks — the platform pieces the whole
+              # cluster depends on.
               - type: monitor
-                title: Services
+                title: Infrastructure
+                cache: 1m
+                sites:
+                  - title: ArgoCD
+                    url: https://argocd.home.shasame.fr
+                    icon: si:argo
+                  - title: Traefik
+                    url: https://traefik.home.shasame.fr
+                    icon: si:traefikproxy
+
+              # Media stack health checks — quick reachability + shortcuts
+              # for every app in the media namespace.
+              - type: monitor
+                title: Media Stack
                 cache: 1m
                 sites:
                   - title: Jellyfin
                     url: https://jellyfin.home.shasame.fr
                     icon: si:jellyfin
-                  - title: Jellyseerr
-                    url: https://jellyseerr.home.shasame.fr
+                  - title: Seerr
+                    url: https://seerr.home.shasame.fr
                     icon: si:jellyseerr
                   - title: Sonarr
                     url: https://sonarr.home.shasame.fr
@@ -208,11 +324,12 @@ data:
                   - title: qBittorrent
                     url: https://qbittorrent.home.shasame.fr
                     icon: si:qbittorrent
-                  - title: Traefik
-                    url: https://traefik.home.shasame.fr
-                    icon: si:traefikproxy
+                  - title: qui
+                    url: https://qui.home.shasame.fr
+                    icon: si:qbittorrent
 
               # Sonarr queue/stats — shows monitored series count and queue.
+              # Doubles as a health signal: errors/warnings surface here too.
               # SONARR_API_KEY injected via environment variable.
               - type: custom-api
                 title: Sonarr
